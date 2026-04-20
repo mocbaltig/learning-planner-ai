@@ -12,5 +12,8 @@ describe('Smoke Tests', () => {
   test('GET /metrics returns metrics', async () => {
     const res = await request(app).get('/metrics');
     expect(res.status).toBe(200);
+    expect(res.text).toContain('http_requests_total');
+    expect(res.text).toContain('http_request_duration_ms');
+    expect(res.text).toContain('ai_requests_total');
   });
 });
