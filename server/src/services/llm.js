@@ -19,9 +19,14 @@ const SuggestionSchema = z.object({
   summary: z.string(),
 });
 
-// TODO: Implementasikan di modul Setup
+// DONE: Implementasikan di modul Setup
 function validateAIOutput(raw) {
-  throw new Error('validateAIOutput belum diimplementasikan');
+  try {
+    const parsed = JSON.parse(raw);
+    return SuggestionSchema.parse(parsed);
+  } catch (error) {
+    return null;
+  }
 }
 
 // TODO: Implementasikan di modul Scaffolding
