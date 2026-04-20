@@ -2,15 +2,16 @@ const express = require('express');
 const cors = require('cors');
 const healthRoutes = require('./routes/health');
 const metricsRoutes = require('./routes/metrics');
+const requestLogger = require('./middleware/requestLogger');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// TODO: Tambahkan request logger middleware (modul Setup — Observability)
+// DONE: Tambahkan request logger middleware (modul Setup — Observability)
 
-app.use('/health', healthRoutes);
-app.use('/metrics', metricsRoutes);
+app.use('/health', requestLogger, healthRoutes);
+app.use('/metrics', requestLogger, metricsRoutes);
 
 // TODO: Aktifkan setelah modul Scaffolding — Authentication & CRUD
 // const authRoutes = require('./routes/auth');
