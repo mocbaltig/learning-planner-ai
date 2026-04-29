@@ -8,6 +8,8 @@ import Dashboard from './pages/Dashboard.jsx';
 import Goals from './pages/Goals.jsx';
 import Calendar from './pages/Calendar.jsx';
 import Progress from './pages/Progress.jsx';
+import Login from './pages/Login.jsx';
+import Register from './pages/Register.jsx';
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -17,13 +19,13 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* <Route path='/login' element={<Login />} /> */}
-        {/* <Route path='/register' element={<Register />} /> */}
+        <Route path='/login' element={<Login />} />
+        <Route path='/register' element={<Register />} />
         <Route
           element={
-            // <ProtectedRoute>
-            <MainLayout />
-            // </ProtectedRoute>
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
           }
         >
           <Route path='/' element={<Dashboard />} />
