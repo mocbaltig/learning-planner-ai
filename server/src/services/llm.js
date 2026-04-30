@@ -27,7 +27,8 @@ const SuggestionSchema = z.object({
 // DONE: Implementasikan di modul Setup
 function validateAIOutput(raw) {
   try {
-    const parsed = JSON.parse(raw);
+    const cleanedRaw = raw.replace(/^```json|```$/g, '').trim();
+    const parsed = JSON.parse(cleanedRaw);
     return SuggestionSchema.parse(parsed);
   } catch (error) {
     return null;
@@ -35,10 +36,7 @@ function validateAIOutput(raw) {
 }
 
 function loadSystemPrompt() {
-  return fs.readFileSync(
-    path.join(___dirname, '../prompts/system.md'),
-    'utf-8',
-  );
+  return fs.readFileSync(path.join(__dirname, '../prompts/system.md'), 'utf-8');
 }
 
 const genAI = new GoogleGenerativeAI(config.geminiKey);
