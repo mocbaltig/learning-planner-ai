@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import GoalCard from '../components/GoalCard.jsx';
 
 export default function Goals() {
   const [goals, setGoals] = useState([]);
@@ -49,8 +50,13 @@ export default function Goals() {
       <ul>
         {goals.map((g) => (
           <li key={g.id}>
-            <strong>{g.title}</strong>
-            {g.deadline && <span> — deadline: {g.deadline}</span>}
+            {/* <strong>{g.title}</strong> */}
+            {/* {g.deadline && <span> — deadline: {g.deadline}</span>} */}
+            <GoalCard
+              title={g.title}
+              deadline={g.deadline}
+              taskTotal={'placeholder'}
+            />
           </li>
         ))}
       </ul>

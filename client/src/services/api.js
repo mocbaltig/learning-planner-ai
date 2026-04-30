@@ -1,6 +1,3 @@
-// TODO: Implementasikan API helper.
-// Lihat modul Scaffolding — sub modul "Authentication & CRUD".
-
 const BASE_URL = '/api';
 
 async function request(path, options = {}) {
@@ -9,7 +6,7 @@ async function request(path, options = {}) {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer $token` }),
+      ...(token && { Authorization: `Bearer ${token}` }),
       ...options.headers,
     },
   });
@@ -24,10 +21,10 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  get: async (path) => request(path),
-  post: async (path, body) =>
+  get: (path) => request(path),
+  post: (path, body) =>
     request(path, { method: 'POST', body: JSON.stringify(body) }),
-  patch: async (path, body) =>
+  patch: (path, body) =>
     request(path, { method: 'PATCH', body: JSON.stringify(body) }),
-  delete: async (path) => request(path, { method: 'DELETE' }),
+  delete: (path) => request(path, { method: 'DELETE' }),
 };
