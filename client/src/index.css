@@ -1,4 +1,5 @@
 @import "tailwindcss";
 
+#root { height: 100%; }
 .error { color: #dc2626; }
 .loading-skeleton { color: #9ca3af; font-style: italic; }
