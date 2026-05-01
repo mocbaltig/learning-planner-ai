@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: pass
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -26,7 +26,7 @@ services:
   server:
     build: ./server
     ports:
-      - '3000:3000'
+      - '3003:3003'
     env_file: ./server/.env
     depends_on:
       db:
