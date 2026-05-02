@@ -7,6 +7,7 @@ const router = express.Router();
 const { z } = require('zod');
 const db = require('../utils/db');
 const authenticate = require('../middleware/authenticate');
+const Goals = require('../models/goals');
 
 const GoalInput = z.object({
   title: z.string().min(1).max(255),
@@ -20,11 +21,11 @@ const GoalInput = z.object({
 router.post('/', authenticate, async (req, res, next) => {
   try {
     const data = GoalInput.parse(req.body);
-    const goal = await db.query(
-      'INSERT INTO goals (user_id, title, description, deadline) VALUES ($1, $2, $3, $4) RETURNING *',
-      [req.user.id, data.title, data.description, data.deadline],
-    );
-    res.status(201).json(goal.rows[0]);
+    const goal = await Goals.create({ userId: req.user.id, ...data });
+    if (!goal) {
+      return res.status(400).json({ error: 'Gagal membuat goal' });
+    }
+    res.status(201).json(goal);
   } catch (err) {
     next(err);
   }
@@ -32,11 +33,20 @@ router.post('/', authenticate, async (req, res, next) => {
 
 router.get('/', authenticate, async (req, res, next) => {
   try {
-    const goals = await db.query(
-      'SELECT * FROM goals WHERE user_id = $1 ORDER BY created_at DESC',
-      [req.user.id],
-    );
-    res.json(goals.rows);
+    const goals = await Goals.getAll(req.user.id);
+    res.json(goals);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/:id', authenticate, async (req, res, next) => {
+  try {
+    const goal = await Goals.findById(req.params.id, req.user.id);
+    if (!goal) {
+      return res.status(404).json({ error: 'Goal tidak ditemukan' });
+    }
+    res.json(goal);
   } catch (err) {
     next(err);
   }
@@ -45,14 +55,17 @@ router.get('/', authenticate, async (req, res, next) => {
 router.patch('/:id', authenticate, async (req, res, next) => {
   try {
     const data = GoalInput.partial().parse(req.body);
-    const goal = await db.query(
-      'UPDATE goals SET title = COALESCE($1, title), description = COALESCE($2, description), deadline = COALESCE($3, deadline) WHERE id = $4 AND user_id = $5 RETURNING *',
-      [data.title, data.description, data.deadline, req.params.id, req.user.id],
-    );
-    if (!goal.rows.length) {
+    const goal = await Goals.update({
+      id: req.params.id,
+      userId: req.user.id,
+      ...data,
+    });
+
+    if (!goal) {
       return res.status(404).json({ error: 'Goal tidak ditemukan' });
     }
-    res.json(goal.rows[0]);
+
+    res.json(goal);
   } catch (err) {
     next(err);
   }
@@ -60,11 +73,8 @@ router.patch('/:id', authenticate, async (req, res, next) => {
 
 router.delete('/:id', authenticate, async (req, res, next) => {
   try {
-    const goal = await db.query(
-      'DELETE FROM goals WHERE id = $1 AND user_id = $2 RETURNING id',
-      [req.params.id, req.user.id],
-    );
-    if (!goal.rows.length) {
+    const goal = await Goals.delete(req.params.id, req.user.id);
+    if (!goal) {
       return res.status(404).json({ error: 'Goal tidak ditemukan' });
     }
     res.status(204).end();
