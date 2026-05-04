@@ -4,19 +4,8 @@
 
 const express = require('express');
 const router = express.Router();
-const { z } = require('zod');
-const db = require('../utils/db');
 const authenticate = require('../middleware/authenticate');
-const Goals = require('../models/goals');
-
-const GoalInput = z.object({
-  title: z.string().min(1).max(255),
-  description: z.string().optional(),
-  deadline: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-});
+const { Goals, GoalInput } = require('../models/goals.js');
 
 router.post('/', authenticate, async (req, res, next) => {
   try {

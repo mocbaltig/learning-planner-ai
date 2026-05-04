@@ -1,4 +1,6 @@
 const db = require('../utils/db');
+const { z } = require('zod');
+
 class Goals {
   async create({ userId, title, description, deadline }) {
     const result = await db.query(
@@ -16,11 +18,8 @@ class Goals {
     return result.rows;
   }
 
-  async findById(id, userId) {
-    const result = await db.query(
-      'SELECT * FROM goals WHERE id = $1 AND user_id = $2',
-      [id, userId],
-    );
+  async findById(id) {
+    const result = await db.query('SELECT * FROM goals WHERE id = $1', [id]);
     return result.rows[0];
   }
 
@@ -41,4 +40,13 @@ class Goals {
   }
 }
 
-module.exports = new Goals();
+const GoalInput = z.object({
+  title: z.string().min(1).max(255),
+  description: z.string().optional(),
+  deadline: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+});
+
+module.exports = { Goals: new Goals(), GoalInput };
