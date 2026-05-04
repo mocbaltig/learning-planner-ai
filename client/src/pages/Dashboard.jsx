@@ -20,12 +20,20 @@ const sampleTasks = [
 
 export default function Dashboard() {
   return (
-    <div>
-      <h1>Dashboard</h1>
+    <div className="max-w-4xl">
+      <div className="mb-10">
+        <h2 className="text-3xl font-bold">Dashboard</h2>
+        <p className="text-slate-400">Hello World, test test 🚀</p>
+      </div>
+
       <ProgressBar completed={1} total={2} label='Progress Minggu ini' />
-      {sampleTasks.map((task) => (
-        <TaskItem key={task.id} task={task} onStatusChange={() => {}} />
-      ))}
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Daftar Tugas</h3>
+        {sampleTasks.map((task) => (
+          <TaskItem key={task.id} task={task} onStatusChange={() => {}} />
+        ))}
+      </div>
     </div>
   );
 }
