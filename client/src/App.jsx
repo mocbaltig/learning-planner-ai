@@ -25,6 +25,7 @@ export default function App() {
           element={
             <ProtectedRoute>
               <MainLayout />
+              
             </ProtectedRoute>
           }
         >
