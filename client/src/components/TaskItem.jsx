@@ -27,7 +27,7 @@ export default function TaskItem({ task, onStatusChange }) {
           onClick={() => onStatusChange(task.id, 'done')}
           className="bg-indigo-600/10 hover:bg-indigo-600 text-indigo-500 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all"
         >
-          ✅ Selesai
+          Selesai
         </button>
       )}
     </div>
