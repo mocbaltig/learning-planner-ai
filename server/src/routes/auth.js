@@ -4,12 +4,12 @@
 
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { z } = require('zod');
-const db = require('../utils/db');
 const config = require('../utils/config');
 const authenticate = require('../middleware/authenticate');
+const { Users } = require('../models/users');
+const { Profiles } = require('../models/profiles');
 
 const AuthInput = z.object({
   email: z.string().email(),
@@ -27,21 +27,14 @@ function generateRefreshToken(userId) {
 router.post('/register', async (req, res, next) => {
   try {
     const { email, password } = AuthInput.parse(req.body);
-    const existing = await db.query('SELECT id FROM users WHERE email = $1', [
-      email,
-    ]);
-    if (existing.rows.length > 0) {
+    const existing = await Users.emailExist(email);
+    if (existing) {
       return res.status(409).json({ error: 'Email sudah terdaftar' });
     }
-    const passwordHash = await bcrypt.hash(password, 10);
-    const result = await db.query(
-      'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id',
-      [email, passwordHash],
-    );
+    const result = await Users.create({ email, password });
+    const userId = result.id;
 
-    const userId = result.rows[0].id;
-
-    await db.query('INSERT INTO profiles (user_id) VALUES ($1)', [userId]);
+    await Profiles.init(userId);
 
     const token = generateToken(userId);
     const refreshToken = generateRefreshToken(userId);
@@ -56,24 +49,15 @@ router.post('/login', async (req, res, next) => {
   try {
     const { email, password } = AuthInput.parse(req.body);
 
-    const result = await db.query(
-      'SELECT id, password_hash FROM users WHERE email = $1',
-      [email],
-    );
+    const userId = await Users.verify(email, password);
 
-    if (result.rows.length === 0) {
+    if (!userId) {
       return res.status(401).json({ error: 'Email atau password salah' });
     }
 
-    const user = result.rows[0];
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) {
-      return res.status(401).json({ error: 'Email atau password salah' });
-    }
-
-    const token = generateToken(user.id);
-    const refreshToken = generateRefreshToken(user.id);
-    res.json({ token, refreshToken, userId: user.id });
+    const token = generateToken(userId);
+    const refreshToken = generateRefreshToken(userId);
+    res.json({ token, refreshToken, userId });
   } catch (err) {
     next(err);
   }
@@ -81,20 +65,13 @@ router.post('/login', async (req, res, next) => {
 
 router.get('/me', authenticate, async (req, res, next) => {
   try {
-    const result = await db.query(
-      `SELECT u.id, u.email, u.created_at, p.timezone, p.preferred_time, p.weekly_target_hours, p.availability
-        FROM users u
-        LEFT JOIN profiles p ON p.user_id = u.id
-        WHERE u.id = $1
-      `,
-      [req.user.id],
-    );
+    const profile = await Profiles.findByUserId(req.user.id);
 
-    if (result.rows.length === 0) {
+    if (!profile) {
       return res.status(404).json({ error: 'User tidak ditemukan' });
     }
 
-    res.json(result.rows[0]);
+    res.json(profile);
   } catch (err) {
     next(err);
   }

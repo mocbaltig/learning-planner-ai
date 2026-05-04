@@ -1,6 +1,12 @@
 require('dotenv').config();
 const request = require('supertest');
 const app = require('../src/app');
+const db = require('../src/utils/db');
+
+afterAll(async () => {
+  await db.query('DELETE FROM users WHERE email = $1', ['test@example.com']);
+  await db.pool.end();
+});
 
 describe('Smoke Tests', () => {
   test('GET /health returns ok', async () => {
