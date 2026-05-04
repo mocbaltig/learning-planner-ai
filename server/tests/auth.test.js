@@ -104,6 +104,6 @@ describe('GET /api/auth/me', () => {
 
 // Delete on test finished
 afterAll(async () => {
-  await db.query(`DELETE FROM users where id = '${userId}';`);
+  await db.query(`DELETE FROM users where id = $1`, [userId]);
   await db.pool.end();
 });
