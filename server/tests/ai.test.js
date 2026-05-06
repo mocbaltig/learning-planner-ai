@@ -261,7 +261,7 @@ describe('PATCH /api/ai/recommendations/:id without auth', () => {
 // });
 
 afterAll(async () => {
-  await db.query(`DELETE FROM goals where user_id = $1`, [userId]);
-  await db.query(`DELETE FROM ai_recommendations where user_id = $1`, [userId]);
+  await db.query('DELETE FROM goals where user_id = $1', [userId]);
+  await db.query('DELETE FROM ai_recommendations where user_id = $1', [userId]);
   await db.pool.end();
 });

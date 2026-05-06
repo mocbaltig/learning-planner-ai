@@ -179,6 +179,6 @@ describe('POST /api/tasks with default source', () => {
 });
 
 afterAll(async () => {
-  await db.query(`DELETE FROM goals where user_id = $1`, [userId]);
+  await db.query('DELETE FROM goals where user_id = $1', [userId]);
   await db.pool.end();
 });
