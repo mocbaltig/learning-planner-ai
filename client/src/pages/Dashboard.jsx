@@ -182,7 +182,7 @@ export default function Dashboard() {
               </div>
             </div>
             <p className='mt-4 text-indigo-400 text-sm font-medium italic'>
-              "Konsistensi kecil setiap hari menciptakan hasil besar di masa depan. 💪"
+              &quot;Konsistensi kecil setiap hari menciptakan hasil besar di masa depan. 💪&quot;
             </p>
           </div>
         </div>
