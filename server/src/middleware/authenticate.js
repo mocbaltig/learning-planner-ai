@@ -3,11 +3,12 @@
 
 const jwt = require('jsonwebtoken');
 const config = require('../utils/config');
+const { UnauthorizedError } = require('../exceptions');
 
-function authenticate(req, res, next) {
+function authenticate(req, _, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Token tidak ditemukan' });
+    return next(new UnauthorizedError('Token tidak ditemukan'));
   }
 
   const token = authHeader.split(' ')[1];
@@ -17,9 +18,7 @@ function authenticate(req, res, next) {
     req.user = { id: decoded.userId };
     next();
   } catch (err) {
-    return res
-      .status(401)
-      .json({ error: 'Token tidak valid atau sudah expired' });
+    return next(new UnauthorizedError('Token tidak valid atau sudah expired'));
   }
 }
 

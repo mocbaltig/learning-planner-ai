@@ -7,6 +7,7 @@ const { z } = require('zod');
 const { Tasks } = require('../models/tasks');
 const logger = require('../utils/logger');
 const authenticate = require('../middleware/authenticate');
+const { InvariantError } = require('../exceptions');
 
 const TaskInput = z.object({
   goal_id: z.string().uuid(),
@@ -21,17 +22,20 @@ const TaskInput = z.object({
 
 router.post('/', authenticate, async (req, res, next) => {
   try {
-    const data = TaskInput.parse(req.body);
-    const task = await Tasks.create({ ...data, status: 'todo' });
+    const taskInput = TaskInput.safeParse(req.body);
+    if (!taskInput.success) {
+      return next(taskInput.error);
+    }
+    const task = await Tasks.create({ ...taskInput.data, status: 'todo' });
 
     if (!task) {
-      return res.status(400).json({ error: 'Gagal membuat task' });
+      return next(new InvariantError('Gagal membuat task'));
     }
 
     logger.info({
       request_id: req.requestId,
       action: 'task_created',
-      source: data.source,
+      source: taskInput.data.source,
       task_id: task.id,
     });
 

@@ -1,4 +1,6 @@
+const { ClientError } = require('../exceptions');
 const logger = require('../utils/logger');
+const z = require('zod');
 
 function errorHandler(err, req, res, _next) {
   logger.error({
@@ -8,16 +10,16 @@ function errorHandler(err, req, res, _next) {
     route: req.originalUrl,
   });
 
-  if (err.name === 'ZodError') {
+  if (err instanceof ClientError) {
+    return res.status(err.statusCode).json({ error: err.message });
+  }
+
+  if (err instanceof z.ZodError) {
     return res
       .status(400)
       .json({ error: 'Input tidak valid', details: err.errors });
   }
 
-  if (err.name === 'UnauthorizedError') {
-    return res.status(401).json({ error: 'Autentikasi diperlukan' });
-  }
-
-  res.status(500).json({ error: 'Terjadi kesalahan internal' });
+  return res.status(500).json({ error: 'Terjadi kesalahan internal' });
 }
 module.exports = errorHandler;

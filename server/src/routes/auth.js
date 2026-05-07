@@ -10,6 +10,11 @@ const config = require('../utils/config');
 const authenticate = require('../middleware/authenticate');
 const { Users } = require('../models/users');
 const { Profiles } = require('../models/profiles');
+const {
+  ConflictError,
+  UnauthorizedError,
+  NotFoundError,
+} = require('../exceptions');
 
 const AuthInput = z.object({
   email: z.string().email(),
@@ -25,56 +30,52 @@ function generateRefreshToken(userId) {
 }
 
 router.post('/register', async (req, res, next) => {
-  try {
-    const { email, password } = AuthInput.parse(req.body);
-    const existing = await Users.emailExist(email);
-    if (existing) {
-      return res.status(409).json({ error: 'Email sudah terdaftar' });
-    }
-    const result = await Users.create({ email, password });
-    const userId = result.id;
-
-    await Profiles.init(userId);
-
-    const token = generateToken(userId);
-    const refreshToken = generateRefreshToken(userId);
-
-    res.status(201).json({ token, refreshToken, userId });
-  } catch (err) {
-    next(err);
+  const result = AuthInput.safeParse(req.body);
+  if (!result.success) {
+    return next(result.error);
   }
+  const { email, password } = result.data;
+  const existing = await Users.emailExist(email);
+  if (existing) {
+    return next(new ConflictError('Email sudah terdaftar'));
+  }
+  const userResult = await Users.create({ email, password });
+  const userId = userResult.id;
+
+  await Profiles.init(userId);
+
+  const token = generateToken(userId);
+  const refreshToken = generateRefreshToken(userId);
+
+  res.status(201).json({ token, refreshToken, userId });
 });
 
 router.post('/login', async (req, res, next) => {
-  try {
-    const { email, password } = AuthInput.parse(req.body);
-
-    const userId = await Users.verify(email, password);
-
-    if (!userId) {
-      return res.status(401).json({ error: 'Email atau password salah' });
-    }
-
-    const token = generateToken(userId);
-    const refreshToken = generateRefreshToken(userId);
-    res.json({ token, refreshToken, userId });
-  } catch (err) {
-    next(err);
+  const result = AuthInput.safeParse(req.body);
+  if (!result.success) {
+    return next(result.error);
   }
+  const { email, password } = result.data;
+
+  const userId = await Users.verify(email, password);
+
+  if (!userId) {
+    return next(new UnauthorizedError('Email atau password salah'));
+  }
+
+  const token = generateToken(userId);
+  const refreshToken = generateRefreshToken(userId);
+  res.json({ token, refreshToken, userId });
 });
 
 router.get('/me', authenticate, async (req, res, next) => {
-  try {
-    const profile = await Profiles.findByUserId(req.user.id);
+  const profile = await Profiles.findByUserId(req.user.id);
 
-    if (!profile) {
-      return res.status(404).json({ error: 'User tidak ditemukan' });
-    }
-
-    res.json(profile);
-  } catch (err) {
-    next(err);
+  if (!profile) {
+    return next(new NotFoundError('User tidak ditemukan'));
   }
+
+  res.json(profile);
 });
 
 module.exports = router;
