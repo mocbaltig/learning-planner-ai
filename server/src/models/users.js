@@ -23,7 +23,7 @@ class Users {
       'SELECT id, password_hash FROM users WHERE email = $1',
       [email],
     );
-    if (!user) {
+    if (user.rows.length === 0) {
       return null;
     }
     const { id, password_hash: passwordHash } = user.rows[0];
