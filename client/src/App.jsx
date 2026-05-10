@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Goals from './pages/Goals.jsx';
+import GoalDetail from './pages/GoalDetail.jsx';
 import Calendar from './pages/Calendar.jsx';
 import Progress from './pages/Progress.jsx';
 import Login from './pages/Login.jsx';
@@ -30,6 +31,7 @@ export default function App() {
         >
           <Route path='/' element={<Dashboard />} />
           <Route path='/goals' element={<Goals />} />
+          <Route path='/goals/:id' element={<GoalDetail />} />
           <Route path='/calendar' element={<Calendar />} />
           <Route path='/progress' element={<Progress />} />
         </Route>

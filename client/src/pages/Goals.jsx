@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import GoalCard from '../components/GoalCard.jsx';
 import {
@@ -10,6 +11,7 @@ import {
 export default function Goals() {
   const [goals, setGoals] = useState([]);
   const [title, setTitle] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     api.get('/goals').then(setGoals);
@@ -22,7 +24,10 @@ export default function Goals() {
 
     setGoals([newGoal, ...goals]);
     setTitle('');
+    // Langsung navigasi ke halaman detail → trigger AI suggestion flow
+    navigate(`/goals/${newGoal.id}`);
   }
+
 
   return (
     <div className='min-h-screen bg-[#020617] text-white p-6'>
@@ -120,9 +125,9 @@ export default function Goals() {
               className='bg-[#0f172a] border border-white/10 rounded-3xl p-5 hover:border-indigo-500/30 transition-all'
             >
               <GoalCard
+                id={g.id}
                 title={g.title}
                 deadline={g.deadline}
-                taskTotal={'placeholder'}
               />
             </div>
           ))}
