@@ -52,6 +52,14 @@ class Tasks {
     );
     return result.rows;
   }
+
+  async findByGoalId(goalId) {
+    const result = await db.query(
+      'SELECT * FROM tasks WHERE goal_id = $1 ORDER BY planned_date ASC',
+      [goalId],
+    );
+    return result.rows;
+  }
 }
 
 module.exports = { Tasks: new Tasks() };

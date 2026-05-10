@@ -44,4 +44,17 @@ router.post('/', authenticate, async (req, res, next) => {
     next(error);
   }
 });
+
+router.get('/', authenticate, async (req, res, next) => {
+  try {
+    const { goal_id } = req.query;
+    if (!goal_id) {
+      return res.json([]);
+    }
+    const tasks = await Tasks.findByGoalId(goal_id);
+    res.json(tasks);
+  } catch (error) {
+    next(error);
+  }
+});
 module.exports = router;

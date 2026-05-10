@@ -19,10 +19,11 @@ const SuggestInput = z.object({
 });
 
 router.post('/plan/suggest', authenticate, async (req, res, next) => {
-  const input = SuggestInput.safeParse(req.body);
-  if (!input.success) {
-    return next(input.error);
-  }
+  try {
+    const input = SuggestInput.safeParse(req.body);
+    if (!input.success) {
+      return next(input.error);
+    }
 
   const goal = await Goals.findById(input.data.goal_id);
   if (!goal) {
@@ -68,14 +69,17 @@ router.post('/plan/suggest', authenticate, async (req, res, next) => {
     }
   }
 
-  await AIRecommendations.create({
-    user_id: req.user.id,
-    type: 'suggest',
-    input_context: context,
-    output: finalOutput,
-  });
+    await AIRecommendations.create({
+      user_id: req.user.id,
+      type: 'suggest',
+      input_context: context,
+      output: finalOutput,
+    });
 
-  res.json(finalOutput);
+    res.json(finalOutput);
+  } catch (error) {
+    next(error);
+  }
 });
 
 // NOTE: buat route ini karena pada `/api/ai/plan/suggest`
@@ -84,27 +88,35 @@ router.patch(
   '/recommendations/latest',
   authenticate,
   async (req, res, next) => {
-    const { status } = req.body;
-    const recommendation = await AIRecommendations.findLatestByUserId(
-      req.user.id,
-    );
-    if (!recommendation) {
-      return next(new NotFoundError('AI recommendations tidak ditemukan'));
+    try {
+      const { status } = req.body;
+      const recommendation = await AIRecommendations.findLatestByUserId(
+        req.user.id,
+      );
+      if (!recommendation) {
+        return next(new NotFoundError('AI recommendations tidak ditemukan'));
+      }
+      await AIRecommendations.updateStatus(recommendation.id, status);
+      res.json({ id: recommendation.id, status });
+    } catch (error) {
+      next(error);
     }
-    await AIRecommendations.updateStatus(recommendation.id, status);
-    res.json({ id: recommendation.id, status });
   },
 );
 
 router.patch('/recommendations/:id', authenticate, async (req, res, next) => {
-  const result = await AIRecommendations.updateStatus(
-    req.params.id,
-    req.body.status,
-  );
-  if (!result) {
-    return next(new NotFoundError('AI recommendations tidak ditemukan'));
+  try {
+    const result = await AIRecommendations.updateStatus(
+      req.params.id,
+      req.body.status,
+    );
+    if (!result) {
+      return next(new NotFoundError('AI recommendations tidak ditemukan'));
+    }
+    return res.json({ id: result });
+  } catch (error) {
+    next(error);
   }
-  return res.json({ id: result });
 });
 
 module.exports = router;

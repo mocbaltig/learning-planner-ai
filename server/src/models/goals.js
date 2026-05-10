@@ -12,7 +12,10 @@ class Goals {
 
   async getAll(userId) {
     const result = await db.query(
-      'SELECT * FROM goals WHERE user_id = $1 ORDER BY created_at DESC',
+      `SELECT g.*, (SELECT COUNT(*) FROM tasks t WHERE t.goal_id = g.id)::int as task_total
+       FROM goals g 
+       WHERE g.user_id = $1 
+       ORDER BY g.created_at DESC`,
       [userId],
     );
     return result.rows;
