@@ -63,3 +63,17 @@ cd client && npm install && npm run dev
 | `POST`   | `/api/tasks`                     | Create task \*                            |
 
 > \* protected/need authentication
+
+## Screenshots
+
+| |
+|---|
+| ![](./.screenshot/mpv-shot0001.jpg) |
+| ![](./.screenshot/mpv-shot0002.jpg) |
+| ![](./.screenshot/mpv-shot0003.jpg) |
+| ![](./.screenshot/mpv-shot0004.jpg) |
+| ![](./.screenshot/mpv-shot0005.jpg) |
+| ![](./.screenshot/mpv-shot0006.jpg) |
+| ![](./.screenshot/mpv-shot0007.jpg) |
+| ![](./.screenshot/mpv-shot0008.jpg) |
+| ![](./.screenshot/mpv-shot0009.jpg) |
