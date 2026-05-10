@@ -159,7 +159,7 @@ describe('POST /api/ai/plan/suggest with valid body', () => {
         goal_id: goalId,
         week_start: '2026-01-05',
       });
-  });
+  }, 30000);
   it('should have 200 status code', async () => {
     expect(res.status).toBe(200);
   });
