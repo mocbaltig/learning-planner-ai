@@ -1,8 +1,3 @@
-// TODO: Implementasikan LLM service secara bertahap:
-// 1. Setup (Observability): definisikan SuggestionSchema dan validateAIOutput
-// 2. Scaffolding (AI Stub): tambahkan koneksi Gemini dan mock mode
-// 3. Cycle 1: implementasikan callLLM penuh dengan konteks dari database
-
 require('dotenv').config();
 const { z } = require('zod');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -68,7 +63,6 @@ async function callLLMMock(type, context) {
   });
 }
 
-// TODO: Implementasikan di modul Scaffolding
 const callLLM = config.llmProvider === 'mock' ? callLLMMock : callLLMReal;
 
 module.exports = { callLLM, validateAIOutput, SuggestionSchema, TaskSchema };

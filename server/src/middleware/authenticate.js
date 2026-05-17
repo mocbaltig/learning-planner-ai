@@ -1,6 +1,3 @@
-// TODO: Implementasikan JWT authentication middleware.
-// Lihat modul Scaffolding — sub modul "Authentication & CRUD".
-
 const jwt = require('jsonwebtoken');
 const config = require('../utils/config');
 const { UnauthorizedError } = require('../exceptions');
