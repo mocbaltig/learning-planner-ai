@@ -1,9 +1,32 @@
 require('dotenv').config();
+
+jest.mock('../src/services/llm', () => ({
+  ...jest.requireActual('../src/services/llm'),
+  callLLM: jest.fn(() =>
+    Promise.resolve(
+      JSON.stringify({
+        tasks: [
+          {
+            title: 'Mock Task',
+            description: 'Mock Description',
+            duration_estimate: 45,
+            planned_date: '2026-01-12',
+            planned_slot: 'morning',
+            rationale: 'Mock rationale',
+          },
+        ],
+        summary: 'Mock summary',
+      }),
+    ),
+  ),
+}));
+
 const request = require('supertest');
 const app = require('../src/app');
 const db = require('../src/utils/db');
-const { validateAIOutput, SuggestionSchema } = require('../src/services/llm');
-const { AIRecommendations } = require('../src/models/ai_recommendations');
+const { callLLM, validateAIOutput } = require('../src/services/llm');
+const AIRecommendations = require('../src/models/ai_recommendations');
+const { aiSuggestionPayloadSchema } = require('../src/validator/ai-schema');
 
 let token;
 let userId;
@@ -58,7 +81,7 @@ describe('validateAIOutput()', () => {
 }
 \`\`\``;
     const validated = validateAIOutput(raw);
-    const result = SuggestionSchema.safeParse(validated);
+    const result = aiSuggestionPayloadSchema.safeParse(validated);
     expect(result.success).toBe(true);
   });
 
@@ -79,7 +102,7 @@ describe('validateAIOutput()', () => {
 }
 \`\`\``;
     const validated = validateAIOutput(raw);
-    const result = SuggestionSchema.safeParse(validated);
+    const result = aiSuggestionPayloadSchema.safeParse(validated);
     expect(result.success).toBe(false);
     expect(result.error.issues.length).toBeGreaterThan(0);
   });
@@ -170,13 +193,56 @@ describe('POST /api/ai/plan/suggest with valid body', () => {
     expect(typeof res.body).toBe('object');
   });
   it('should return valid suggestion schema', async () => {
-    const result = SuggestionSchema.safeParse(res.body);
+    const result = aiSuggestionPayloadSchema.safeParse(res.body);
     expect(result.success).toBe(true);
   });
   it('should have tasks array and summary', async () => {
     expect(Array.isArray(res.body.tasks)).toBe(true);
     expect(res.body.tasks.length).toBeGreaterThan(0);
     expect(typeof res.body.summary).toBe('string');
+  });
+});
+
+describe('POST /api/ai/plan/suggest when LLM returns invalid output twice', () => {
+  let res;
+  beforeAll(async () => {
+    callLLM.mockResolvedValue('invalid{{{');
+    res = await request(app)
+      .post('/api/ai/plan/suggest')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        goal_id: goalId,
+        week_start: '2026-01-19',
+      });
+  });
+  afterAll(() => {
+    callLLM.mockReset();
+    callLLM.mockImplementation(() =>
+      Promise.resolve(
+        JSON.stringify({
+          tasks: [
+            {
+              title: 'Mock Task',
+              description: 'Mock Description',
+              duration_estimate: 45,
+              planned_date: '2026-01-12',
+              planned_slot: 'morning',
+              rationale: 'Mock rationale',
+            },
+          ],
+          summary: 'Mock summary',
+        }),
+      ),
+    );
+  });
+  it('should have 422 status code', async () => {
+    expect(res.status).toBe(422);
+  });
+  it('should return error message', async () => {
+    expect(res.body.error).toBe(
+      'AI tidak dapat memberikan saran yang valid. Coba lagi nanti.',
+    );
   });
 });
 
@@ -226,39 +292,39 @@ describe('PATCH /api/ai/recommendations/:id without auth', () => {
   });
 });
 
-// describe('PATCH /api/ai/recommendations/:id with non-existent ID', () => {
-//   let res;
-//   beforeAll(async () => {
-//     res = await request(app)
-//       .patch('/api/ai/recommendations/00000000-0000-0000-0000-000000000000')
-//       .set('Authorization', `Bearer ${token}`)
-//       .set('Content-Type', 'application/json')
-//       .send({ status: 'accepted' });
-//   });
-//   it('should have 404 status code', async () => {
-//     expect(res.status).toBe(404);
-//   });
-//   it('should return error message', async () => {
-//     expect(res.body.error).toBe('AI recommendations tidak ditemukan');
-//   });
-// });
-//
-// describe('PATCH /api/ai/recommendations/:id with valid body', () => {
-//   let res;
-//   beforeAll(async () => {
-//     res = await request(app)
-//       .patch(`/api/ai/recommendations/${recommendationId}`)
-//       .set('Authorization', `Bearer ${token}`)
-//       .set('Content-Type', 'application/json')
-//       .send({ status: 'rejected' });
-//   });
-//   it('should have 200 status code', async () => {
-//     expect(res.status).toBe(200);
-//   });
-//   it('should return id', async () => {
-//     expect(res.body).toMatchObject({ id: recommendationId });
-//   });
-// });
+describe('PATCH /api/ai/recommendations/:id with non-existent ID', () => {
+  let res;
+  beforeAll(async () => {
+    res = await request(app)
+      .patch('/api/ai/recommendations/00000000-0000-0000-0000-000000000000')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({ status: 'accepted' });
+  });
+  it('should have 404 status code', async () => {
+    expect(res.status).toBe(404);
+  });
+  it('should return error message', async () => {
+    expect(res.body.error).toBe('AI recommendations tidak ditemukan');
+  });
+});
+
+describe('PATCH /api/ai/recommendations/:id with valid body', () => {
+  let res;
+  beforeAll(async () => {
+    res = await request(app)
+      .patch(`/api/ai/recommendations/${recommendationId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({ status: 'rejected' });
+  });
+  it('should have 200 status code', async () => {
+    expect(res.status).toBe(200);
+  });
+  it('should return id', async () => {
+    expect(res.body).toMatchObject({ id: recommendationId });
+  });
+});
 
 afterAll(async () => {
   await db.query('DELETE FROM goals where user_id = $1', [userId]);

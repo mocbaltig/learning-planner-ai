@@ -2,6 +2,8 @@ require('dotenv').config();
 const request = require('supertest');
 const app = require('../src/app');
 const db = require('../src/utils/db');
+const { z } = require('zod');
+const { taskPayloadSchema } = require('../src/validator/task-schema');
 
 let token;
 let userId;
@@ -165,9 +167,11 @@ describe('POST /api/tasks with default source', () => {
       .send({
         goal_id: goalId,
         title: 'Default Source Task',
+        description: '',
         duration_estimate: 30,
         planned_date: '2026-01-06',
         planned_slot: 'afternoon',
+        rationale: '',
       });
   });
   it('should have 201 status code', async () => {
@@ -175,6 +179,24 @@ describe('POST /api/tasks with default source', () => {
   });
   it('should default source to manual', async () => {
     expect(res.body.source).toBe('manual');
+  });
+});
+
+describe('GET /api/tasks with week_start query', () => {
+  let res;
+  beforeAll(async () => {
+    res = await request(app)
+      .get('/api/tasks?week_start=2026-01-06')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json');
+  });
+  it('should have 200 status code', async () => {
+    expect(res.status).toBe(200);
+  });
+  it('should satisfy task schema', async () => {
+    const taskListSchema = z.array(taskPayloadSchema);
+    const result = taskListSchema.safeParse(res.body);
+    expect(result.success).toBe(true);
   });
 });
 
