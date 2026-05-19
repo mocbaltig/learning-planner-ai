@@ -1,5 +1,4 @@
 const db = require('../utils/db');
-const { z } = require('zod');
 
 class Goals {
   async create({ userId, title, description, deadline }) {
@@ -43,13 +42,4 @@ class Goals {
   }
 }
 
-const GoalInput = z.object({
-  title: z.string().min(1).max(255),
-  description: z.string().optional(),
-  deadline: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-});
-
-module.exports = { Goals: new Goals(), GoalInput };
+module.exports = new Goals();
