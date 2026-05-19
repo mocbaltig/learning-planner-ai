@@ -21,8 +21,9 @@ class AIRecommendations {
       'UPDATE ai_recommendations SET status = $1 WHERE id = $2 RETURNING id',
       [status, id],
     );
+    if (result.rows.length === 0) return null;
     return result.rows[0].id;
   }
 }
 
-module.exports = { AIRecommendations: new AIRecommendations() };
+module.exports = new AIRecommendations();

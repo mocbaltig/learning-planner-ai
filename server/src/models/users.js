@@ -12,17 +12,14 @@ class Users {
   }
 
   async emailExist(email) {
-    const result = await db.query('SELECT id FROM users WHERE email = $1', [
-      email,
-    ]);
+    const result = await db.query('SELECT id FROM users WHERE email = $1', [email]);
     return result.rows.length > 0;
   }
 
   async verify(email, password) {
-    const user = await db.query(
-      'SELECT id, password_hash FROM users WHERE email = $1',
-      [email],
-    );
+    const user = await db.query('SELECT id, password_hash FROM users WHERE email = $1', [
+      email,
+    ]);
     if (user.rows.length === 0) {
       return null;
     }
@@ -48,4 +45,4 @@ class Users {
   }
 }
 
-module.exports = { Users: new Users() };
+module.exports = new Users();
