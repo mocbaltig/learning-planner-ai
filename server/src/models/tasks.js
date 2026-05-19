@@ -53,6 +53,17 @@ class Tasks {
     return result.rows;
   }
 
+  async findByWeekStart(userId, weekStart, weekEnd) {
+    const result = await db.query(
+      `SELECT * FROM tasks
+        WHERE goal_id IN (SELECT id FROM goals WHERE user_id = $1)
+        AND planned_date BETWEEN $2 AND $3
+        ORDER BY planned_date, planned_slot`,
+      [userId, weekStart, weekEnd],
+    );
+    return result.rows;
+  }
+
   async findByGoalId(goalId) {
     const result = await db.query(
       'SELECT * FROM tasks WHERE goal_id = $1 ORDER BY planned_date ASC',
@@ -62,4 +73,4 @@ class Tasks {
   }
 }
 
-module.exports = { Tasks: new Tasks() };
+module.exports = new Tasks();

@@ -37,4 +37,4 @@ class Profiles {
   }
 }
 
-module.exports = { Profiles: new Profiles() };
+module.exports = new Profiles();
