@@ -16,6 +16,7 @@ const aiLimiter = rateLimit({
     });
     res.status(429).json(options.message);
   },
+  skip: () => process.env.NODE_ENV === 'test',
 });
 
 const authLimiter = rateLimit({
