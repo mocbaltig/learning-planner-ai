@@ -1,30 +1,15 @@
 require('dotenv').config();
-const { z } = require('zod');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
 const path = require('path');
 const config = require('../utils/config');
+const { aiSuggestionPayloadSchema } = require('../validator/ai-schema');
 
-const TaskSchema = z.object({
-  title: z.string().min(1),
-  description: z.string(),
-  duration_estimate: z.number().min(25).max(90),
-  planned_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  planned_slot: z.enum(['morning', 'afternoon', 'evening']),
-  rationale: z.string().min(1),
-});
-
-const SuggestionSchema = z.object({
-  tasks: z.array(TaskSchema).min(1),
-  summary: z.string(),
-});
-
-// DONE: Implementasikan di modul Setup
 function validateAIOutput(raw) {
   try {
     const cleanedRaw = raw.replace(/^```json|```$/g, '').trim();
     const parsed = JSON.parse(cleanedRaw);
-    return SuggestionSchema.parse(parsed);
+    return aiSuggestionPayloadSchema.parse(parsed);
   } catch (error) {
     return null;
   }
@@ -65,4 +50,4 @@ async function callLLMMock(type, context) {
 
 const callLLM = config.llmProvider === 'mock' ? callLLMMock : callLLMReal;
 
-module.exports = { callLLM, validateAIOutput, SuggestionSchema, TaskSchema };
+module.exports = { callLLM, validateAIOutput };
