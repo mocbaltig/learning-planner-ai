@@ -1,4 +1,6 @@
 require('dotenv').config();
+const config = require('../src/utils/config.js');
+config.llmProvider = 'mock';
 
 jest.mock('../src/services/llm', () => ({
   ...jest.requireActual('../src/services/llm'),
@@ -326,7 +328,38 @@ describe('PATCH /api/ai/recommendations/:id with valid body', () => {
   });
 });
 
+const { rateLimitConfig } = require('../src/middleware/rateLimiter.js');
+describe('POST /api/ai/plan/suggest with valid body Rate Limit', () => {
+  let res;
+  beforeAll(async () => {
+    rateLimitConfig.disabled = false;
+    for (let index = 0; index <= 20; index++) {
+      res = await request(app)
+        .post('/api/ai/plan/suggest')
+        .set('Authorization', `Bearer ${token}`)
+        .set('Content-Type', 'application/json')
+        .send({
+          goal_id: goalId,
+          week_start: '2026-01-05',
+        });
+    }
+  }, 30000);
+  it('should have 429 status code', async () => {
+    expect(res.status).toBe(429);
+  });
+  it('Content-Type should be application/json', async () => {
+    expect(res.headers['content-type']).toBe('application/json; charset=utf-8');
+  });
+  it('should be an object', async () => {
+    expect(typeof res.body).toBe('object');
+  });
+  it('should return error message: Batas permintaan AI tercapai. Coba lagi dalam 1 menit.', async () => {
+    expect(res.body.error).toBe('Batas permintaan AI tercapai. Coba lagi dalam 1 menit.');
+  });
+});
+
 afterAll(async () => {
+  rateLimitConfig.disabled = true;
   await db.query('DELETE FROM goals where user_id = $1', [userId]);
   await db.query('DELETE FROM ai_recommendations where user_id = $1', [userId]);
   await db.pool.end();

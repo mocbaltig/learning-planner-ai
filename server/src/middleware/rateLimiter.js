@@ -1,6 +1,10 @@
 const rateLimit = require('express-rate-limit');
 const logger = require('../utils/logger');
 
+const rateLimitConfig = {
+  disabled: process.env.NODE_ENV === 'test',
+};
+
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 20,
@@ -16,14 +20,14 @@ const aiLimiter = rateLimit({
     });
     res.status(429).json(options.message);
   },
-  skip: () => process.env.NODE_ENV === 'test',
+  skip: () => rateLimitConfig.disabled,
 });
 
 const authLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 5,
   message: { error: 'Terlalu banyak percobaan. Coba lagi nanti.' },
-  skip: () => process.env.NODE_ENV === 'test',
+  skip: () => rateLimitConfig.disabled,
 });
 
-module.exports = { aiLimiter, authLimiter };
+module.exports = { rateLimitConfig, aiLimiter, authLimiter };
