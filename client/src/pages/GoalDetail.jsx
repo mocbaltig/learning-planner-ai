@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
+import { getThisMonday } from '../utils/dateUtils';
 import AISuggestionPanel from '../components/AISuggestionPanel.jsx';
 import {
   ArrowLeft,
@@ -23,20 +24,13 @@ const SLOT_META = {
   evening:   { label: 'Malam', Icon: Moon,   color: 'text-indigo-400',  bg: 'bg-indigo-500/10' },
 };
 
-/**
- * Hitung Senin awal minggu ini (YYYY-MM-DD).
- */
-function getThisMonday() {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
-}
+
 
 export default function GoalDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const weekStart = searchParams.get('week_start') ?? getThisMonday();
 
   const [goal, setGoal]               = useState(null);
   const [loadingGoal, setLoadingGoal] = useState(true);
@@ -53,7 +47,7 @@ export default function GoalDetail() {
     setLoadingGoal(true);
     Promise.all([
       api.get(`/goals/${id}`),
-      api.get(`/tasks?goal_id=${id}`)
+      api.get(`/tasks?goal_id=${id}&week_start=${weekStart}`)
     ])
       .then(([goalData, tasksData]) => {
         setGoal(goalData);
@@ -62,7 +56,7 @@ export default function GoalDetail() {
       })
       .catch((err) => setErrorGoal(err.message))
       .finally(() => setLoadingGoal(false));
-  }, [id]);
+  }, [id, weekStart]);
 
   function handleTaskAccepted(task) {
     setAcceptedTasks((prev) => [...prev, task]);
@@ -97,7 +91,6 @@ export default function GoalDetail() {
     );
   }
 
-  const weekStart = getThisMonday();
 
   return (
     <div className='min-h-screen bg-[#020617] text-white p-6 max-w-2xl mx-auto'>

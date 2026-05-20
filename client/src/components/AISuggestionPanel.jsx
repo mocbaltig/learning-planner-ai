@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../services/api';
+import { getThisMonday } from '../utils/dateUtils';
 import {
   Sparkles,
   CheckCircle2,
@@ -14,16 +15,6 @@ import {
   CalendarCheck,
 } from 'lucide-react';
 
-/**
- * Hitung Senin awal minggu ini (YYYY-MM-DD).
- */
-function getThisMonday() {
-  const d = new Date();
-  const day = d.getDay(); // 0=Sun, 1=Mon …
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
-}
 
 const SLOT_META = {
   morning:   { label: 'Pagi',  Icon: Sun,    color: 'text-amber-400',   bg: 'bg-amber-500/10' },
