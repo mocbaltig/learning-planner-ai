@@ -29,6 +29,20 @@ export default function Calendar() {
     (task) => task.date === selectedDate
   );
 
+  // Fungsi untuk menentukan tingkat kepadatan dan class Tailwind-nya secara dinamis
+  const getDensityMetrics = (taskCount) => {
+    if (taskCount === 0) {
+      return { width: 'w-0', gradient: 'from-gray-500 to-gray-400', label: 'Tidak Ada Task', textColor: 'text-gray-400' };
+    } else if (taskCount === 1) {
+      return { width: 'w-[35%]', gradient: 'from-green-500 to-emerald-400', label: 'Low', textColor: 'text-green-400' };
+    } else if (taskCount === 2) {
+      return { width: 'w-[65%]', gradient: 'from-yellow-500 to-amber-400', label: 'Medium', textColor: 'text-yellow-400' };
+    } else {
+      return { width: 'w-full', gradient: 'from-amber-500 to-orange-500', label: 'High', textColor: 'text-orange-400' };
+    }
+  };
+
+  const density = getDensityMetrics(todayTasks.length);
   return (
     <div className='min-h-screen bg-[#020617] text-white p-6'>
       <div className='mb-8'>
@@ -61,6 +75,23 @@ export default function Calendar() {
               {date.toDateString()}
             </p>
           </div>
+
+          {/* Progress Bar Kepadatan Task */}
+            <div className='mb-6 bg-[#111c3b]/50 border border-white/5 rounded-2xl p-4'>
+              <div className='flex justify-between items-center text-xs mb-2'>
+                <span className='text-gray-400 font-medium'>Kepadatan Jadwal</span>
+                <span className={`font-bold ${density.textColor}`}>
+                  {density.label} ({todayTasks.length} Task)
+                </span>
+              </div>
+              
+              {/* Track Bar */}
+              <div className='w-full h-2.5 bg-[#1e293b] rounded-full overflow-hidden'>
+                {/* Active Progress Bar dengan Gradasi Dinamis */}
+                <div className={`h-full bg-gradient-to-r ${density.gradient} ${density.width} transition-all duration-500 ease-out`} />
+              </div>
+            </div>
+
 
           <div className='space-y-4'>
             {todayTasks.length > 0 ? (

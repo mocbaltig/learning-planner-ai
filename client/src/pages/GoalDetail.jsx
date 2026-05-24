@@ -53,7 +53,7 @@ export default function GoalDetail() {
     setLoadingGoal(true);
     Promise.all([
       api.get(`/goals/${id}`),
-      api.get(`/tasks?goal_id=${id}`)
+      api.get(`/tasks?goal_id=${id}&week_start=${weekStart}`)
     ])
       .then(([goalData, tasksData]) => {
         setGoal(goalData);
