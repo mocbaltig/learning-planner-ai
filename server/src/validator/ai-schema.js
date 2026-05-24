@@ -19,7 +19,12 @@ const aiSuggestionPayloadSchema = z.object({
   summary: z.string(),
 });
 
+const reschedulePayloadSchema = z.object({
+  tasks_ids: z.array(z.string().uuid()).min(1),
+});
+
 module.exports = {
   clientSuggestPayloadSchema,
   aiSuggestionPayloadSchema,
+  reschedulePayloadSchema,
 };

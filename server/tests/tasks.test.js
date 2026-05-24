@@ -194,8 +194,12 @@ describe('GET /api/tasks with week_start query', () => {
     expect(res.status).toBe(200);
   });
   it('should satisfy task schema', async () => {
-    const taskListSchema = z.array(taskPayloadSchema);
-    const result = taskListSchema.safeParse(res.body);
+    const taskListSchema = z.record(z.coerce.date(), z.array(taskPayloadSchema));
+    const responseSchema = z.object({
+      week_start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      tasks: taskListSchema,
+    });
+    const result = responseSchema.safeParse(res.body);
     expect(result.success).toBe(true);
   });
 });

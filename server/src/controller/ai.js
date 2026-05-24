@@ -2,9 +2,11 @@ const Goals = require('../models/goals');
 const Profiles = require('../models/profiles');
 const Tasks = require('../models/tasks');
 const AIRecommendations = require('../models/ai_recommendations');
-const { NotFoundError, UnprocessableEntityError } = require('../exceptions');
+const ProgressSnapshots = require('../models/progress_snapshots');
+const { NotFoundError, UnprocessableEntityError, ClientError } = require('../exceptions');
 const { callLLM, validateAIOutput } = require('../services/llm');
 const logger = require('../utils/logger');
+const { getCurrentWeekStart, getCurrentWeek } = require('../utils/week');
 
 const createSuggestion = async (req, res, next) => {
   try {
@@ -92,8 +94,72 @@ const editRecommendationById = async (req, res, next) => {
   }
 };
 
+const reschedule = async (req, res, next) => {
+  try {
+    const { task_ids } = req.validated;
+
+    if (!task_ids || !Array.isArray(task_ids) || task_ids.length === 0) {
+      return next(new ClientError('task_ids harus berupa array UUID yang tidak kosong'));
+    }
+
+    const overdueTasks = await Tasks.findTasksByIds(task_ids);
+    const weekStart = getCurrentWeekStart();
+    const weekTasks = await Tasks.findTasksByWeek(req.user.id, weekStart);
+
+    // Ambil profile untuk availability
+    const profile = await Profiles.getProfile(req.user.id);
+
+    // Ambil progress minggu ini
+    const week = getCurrentWeek();
+    const progress = await ProgressSnapshots.getProgress(req.user.id, week);
+
+    const context = {
+      overdue_tasks: overdueTasks.map((t) => ({
+        id: t.id,
+        title: t.title,
+        duration_estimate: t.duration_estimate,
+        original_date: t.planned_date,
+      })),
+      current_week_tasks: weekTasks
+        .filter((t) => t.status === 'todo')
+        .map((t) => ({
+          planned_date: t.planned_date,
+          planned_slot: t.planned_slot,
+          duration_estimate: t.duration_estimate,
+        })),
+      availability: profile?.availability || {},
+      remaining_capacity:
+        (profile?.weekly_target_hours || 5) - (progress?.completed_hours || 0),
+    };
+
+    const raw = await callLLM('reschedule', context);
+    const validated = validateAIOutput(raw);
+
+    if (!validated) {
+      return next(
+        new UnprocessableEntityError(
+          'AI tidak dapat menjadwalkan ulang saat ini. Coba lagi.',
+        ),
+      );
+    }
+
+    // Simpan rekomendasi untuk audit
+    await AIRecommendations.create({
+      user_id: req.user.id,
+      type: 'reschedule',
+      input_context: JSON.stringify(context),
+      output: JSON.stringify(validated),
+    });
+
+    res.json(validated);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   createSuggestion,
   editLatestRecommendation,
   editRecommendationById,
+  reschedule,
 };

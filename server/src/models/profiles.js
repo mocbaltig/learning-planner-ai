@@ -35,6 +35,14 @@ class Profiles {
     );
     return result.rows[0];
   }
+
+  async getProfile(userId) {
+    const result = await db.query(
+      'SELECT availability, weekly_target_hours FROM profiles WHERE user_id = $1',
+      [userId],
+    );
+    return result.rows[0];
+  }
 }
 
 module.exports = new Profiles();

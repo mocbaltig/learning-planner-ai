@@ -11,6 +11,7 @@ const authRoutes = require('./routes/auth');
 const goalRoutes = require('./routes/goals');
 const aiRoutes = require('./routes/ai');
 const taskRoutes = require('./routes/tasks');
+const progressRoutes = require('./routes/progress');
 
 const app = express();
 
@@ -24,10 +25,7 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/ai', aiLimiter, aiRoutes);
 app.use('/api/tasks', taskRoutes);
-
-// TODO: Aktifkan setelah modul Cycle 2
-// const progressRoutes = require('./routes/progress');
-// app.use('/api/progress', progressRoutes);
+app.use('/api/progress', progressRoutes);
 
 app.use(errorHandler);
 
