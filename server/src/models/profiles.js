@@ -11,7 +11,7 @@ class Profiles {
 
   async findByUserId(userId) {
     const result = await db.query(
-      `SELECT u.id, u.email, u.created_at, p.timezone, p.preferred_time, p.weekly_target_hours, p.availability
+      `SELECT u.id, u.email, u.created_at, p.timezone, p.preferred_time, p.weekly_target_hours, p.availability, p.llm_token_count
         FROM users u
         LEFT JOIN profiles p ON p.user_id = u.id
         WHERE u.id = $1`,
@@ -28,12 +28,19 @@ class Profiles {
       `UPDATE profiles SET
         timezone = COALESCE($1, timezone),
         preferred_time = COALESCE($2, preferred_time),
-        weekly_target_hours = COALESCE($3, weekly_target_hours )
-        availability = COALESCE($4, availability )
+        weekly_target_hours = COALESCE($3, weekly_target_hours),
+        availability = COALESCE($4, availability)
         WHERE user_id = $5 RETURNING *`,
       [timezone, preferredTime, weeklyTargetHours, availability, userId],
     );
     return result.rows[0];
+  }
+
+  async incrementTokenCount(userId, tokens) {
+    await db.query(
+      'UPDATE profiles SET llm_token_count = COALESCE(llm_token_count, 0) + $1 WHERE user_id = $2',
+      [tokens, userId],
+    );
   }
 
   async getProfile(userId) {

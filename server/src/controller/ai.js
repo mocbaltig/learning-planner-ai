@@ -39,11 +39,11 @@ const createSuggestion = async (req, res, next) => {
     };
 
     let finalOutput;
-    const raw = await callLLM('suggest', context);
+    const raw = await callLLM('suggest', context, req.user.id);
     finalOutput = validateAIOutput(raw);
     if (!finalOutput) {
       // retry 1x
-      const retry = await callLLM('suggest', context);
+      const retry = await callLLM('suggest', context, req.user.id);
       finalOutput = validateAIOutput(retry);
       if (!finalOutput) {
         logger.warn({ request_id: req.requestId, action: 'ai_suggest_failed' });
@@ -152,7 +152,7 @@ const reschedule = async (req, res, next) => {
     let usedContext = baseContext;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      const raw = await callLLM('reschedule', usedContext);
+      const raw = await callLLM('reschedule', usedContext, req.user.id);
       validated = validateAIOutput(raw);
       if (!validated) continue;
 

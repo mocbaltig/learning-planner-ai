@@ -53,4 +53,16 @@ const me = async (req, res, next) => {
   res.json(profile);
 };
 
-module.exports = { register, login, me };
+const updateProfile = async (req, res, next) => {
+  try {
+    const updated = await Profiles.updateByUserId(req.user.id, req.body);
+    if (!updated) {
+      return next(new NotFoundError('Profile tidak ditemukan'));
+    }
+    res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { register, login, me, updateProfile };
