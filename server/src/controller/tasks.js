@@ -78,8 +78,6 @@ const VALID_TRANSITIONS = {
   skipped: [],
 };
 
-const VALID_STATUSES = ['todo', 'in_progress', 'done', 'skipped'];
-
 /** Update status dengan validasi transisi ketat (dari main) */
 const editStatus = async (req, res, next) => {
   try {
@@ -123,21 +121,6 @@ const editStatus = async (req, res, next) => {
   }
 };
 
-/** Update status sederhana tanpa validasi transisi (alias untuk client yang hanya butuh set status) */
-const updateTaskStatus = async (req, res, next) => {
-  try {
-    const { status } = req.body;
-    if (!VALID_STATUSES.includes(status)) {
-      return next(new ClientError(`Status tidak valid. Harus salah satu dari: ${VALID_STATUSES.join(', ')}`));
-    }
-    const task = await Tasks.updateStatus(req.params.id, req.user.id, status);
-    if (!task) return next(new NotFoundError('Task tidak ditemukan'));
-    res.json(task);
-  } catch (error) {
-    next(error);
-  }
-};
-
 const editTask = async (req, res, next) => {
   try {
     const task = await Tasks.findTaskByIdAndUserId(req.params.id, req.user.id);
@@ -173,6 +156,5 @@ module.exports = {
   createTask,
   getTasksByWeekStart,
   editStatus,
-  updateTaskStatus,
   editTask,
 };

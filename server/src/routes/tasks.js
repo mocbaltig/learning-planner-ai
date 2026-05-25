@@ -5,7 +5,7 @@ const router = express.Router();
 const authenticate = require('../middleware/authenticate');
 const { validate } = require('../middleware/validate');
 const { taskPayloadSchema, taskUpdatePayloadSchema } = require('../validator/task-schema');
-const { createTask, getTasksByWeekStart, editStatus, updateTaskStatus, editTask } = require('../controller/tasks');
+const { createTask, getTasksByWeekStart, editStatus, editTask } = require('../controller/tasks');
 
 router.post('/', authenticate, validate(taskPayloadSchema), createTask);
 router.get('/', authenticate, getTasksByWeekStart);

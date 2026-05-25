@@ -8,6 +8,7 @@ const {
   createSuggestion,
   editLatestRecommendation,
   editRecommendationById,
+  reschedule,
 } = require('../controller/ai');
 
 router.post(
@@ -20,5 +21,12 @@ router.post(
 // NOTE: buat route ini karena pada `/api/ai/plan/suggest` id ai_recommendations ga dikirim ke client
 router.patch('/recommendations/latest', authenticate, editLatestRecommendation);
 router.patch('/recommendations/:id', authenticate, editRecommendationById);
+
+/**
+ * POST /api/ai/plan/reschedule
+ * Body: { task_ids: string[] } — array UUID task yang overdue
+ * Meminta AI untuk menjadwalkan ulang task overdue ke minggu berjalan.
+ */
+router.post('/plan/reschedule', authenticate, reschedule);
 
 module.exports = router;

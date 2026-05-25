@@ -158,36 +158,18 @@ class Tasks {
     return result.rows[0];
   }
 
-  /**
-   * Update status task.
-   * Bisa dipanggil dengan object `{ id, status, actual_duration, duration_estimate }`
-   * atau dengan 3 argumen `(id, userId, status)` — otomatis dideteksi dari tipe argumen.
-   */
-  async updateStatus(idOrObj, userIdOrUndefined, statusOrUndefined) {
-    // Signature lama: updateStatus({ id, status, actual_duration, duration_estimate })
-    if (typeof idOrObj === 'object' && idOrObj !== null) {
-      const { id, status, actual_duration, duration_estimate } = idOrObj;
-      let updateQuery, updateParams;
-      if (status === 'done') {
-        updateQuery =
-          'UPDATE tasks SET status = $1, completed_at = NOW(), actual_duration = $2 WHERE id = $3 RETURNING *';
-        updateParams = [status, actual_duration || duration_estimate, id];
-      } else {
-        updateQuery = 'UPDATE tasks SET status = $1 WHERE id = $2 RETURNING *';
-        updateParams = [status, id];
-      }
-      const result = await db.query(updateQuery, updateParams);
-      return result.rows[0];
+  /** Update status task — dari main: set completed_at dan actual_duration jika status 'done' */
+  async updateStatus({ id, status, actual_duration, duration_estimate }) {
+    let updateQuery, updateParams;
+    if (status === 'done') {
+      updateQuery =
+        'UPDATE tasks SET status = $1, completed_at = NOW(), actual_duration = $2 WHERE id = $3 RETURNING *';
+      updateParams = [status, actual_duration || duration_estimate, id];
+    } else {
+      updateQuery = 'UPDATE tasks SET status = $1 WHERE id = $2 RETURNING *';
+      updateParams = [status, id];
     }
-
-    // Signature baru: updateStatus(id, userId, status) — dengan ownership check
-    const result = await db.query(
-      `UPDATE tasks SET status = $1
-       WHERE id = $2
-         AND goal_id IN (SELECT id FROM goals WHERE user_id = $3)
-       RETURNING *`,
-      [statusOrUndefined, idOrObj, userIdOrUndefined],
-    );
+    const result = await db.query(updateQuery, updateParams);
     return result.rows[0];
   }
 
