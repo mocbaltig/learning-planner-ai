@@ -23,11 +23,18 @@ class Goals {
   }
 
   async findById(id, userId) {
-    const result = await db.query(
+    const goalResult = await db.query(
       'SELECT * FROM goals WHERE id = $1 AND user_id = $2',
       [id, userId],
     );
-    return result.rows[0];
+    const goal = goalResult.rows[0];
+    if (!goal) return null;
+
+    const tasksResult = await db.query(
+      `SELECT * FROM tasks WHERE goal_id = $1 ORDER BY planned_date, planned_slot`,
+      [id],
+    );
+    return { ...goal, tasks: tasksResult.rows };
   }
 
   async update({ id, userId, title, description, deadline }) {
