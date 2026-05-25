@@ -10,6 +10,14 @@ class ProgressSnapshots {
     return result.rows[0];
   }
 
+  async findAllByUserId(userId) {
+    const result = await db.query(
+      'SELECT week, planned_hours, completed_hours, completion_rate FROM progress_snapshots WHERE user_id = $1 ORDER BY week ASC',
+      [userId],
+    );
+    return result.rows;
+  }
+
   async recalculateProgress(userId, date) {
     const week = getWeekString(date);
     const weekStart = getWeekStart(date);

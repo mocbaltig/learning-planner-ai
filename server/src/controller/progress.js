@@ -19,4 +19,18 @@ const getWeeklyProgress = async (req, res, next) => {
   }
 };
 
-module.exports = { getWeeklyProgress };
+const getTrendProgress = async (req, res, next) => {
+  try {
+    const history = await ProgressSnapshots.findAllByUserId(req.user.id);
+    res.json(history.map((h) => ({
+      week: h.week,
+      planned: parseFloat(h.planned_hours),
+      completed: parseFloat(h.completed_hours),
+      rate: parseFloat(h.completion_rate),
+    })));
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getWeeklyProgress, getTrendProgress };

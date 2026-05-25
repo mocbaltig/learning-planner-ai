@@ -13,6 +13,10 @@ const createTask = async (req, res, next) => {
       return next(new InvariantError('Gagal membuat task'));
     }
 
+    if (task.planned_date) {
+      await ProgressSnapshots.recalculateProgress(req.user.id, task.planned_date);
+    }
+
     logger.info({
       request_id: req.requestId,
       action: 'task_created',
@@ -109,6 +113,13 @@ const editTask = async (req, res, next) => {
     const updated = await Tasks.updateTask(req.params.id, req.body);
     if (!updated) {
       return next(new InvariantError('Gagal mengupdate task'));
+    }
+
+    if (task.planned_date) {
+      await ProgressSnapshots.recalculateProgress(req.user.id, task.planned_date);
+    }
+    if (req.body.planned_date && req.body.planned_date !== task.planned_date) {
+      await ProgressSnapshots.recalculateProgress(req.user.id, req.body.planned_date);
     }
 
     logger.info({

@@ -3,9 +3,10 @@
 // GET /weekly, GET /trend
 const express = require('express');
 const authenticate = require('../middleware/authenticate');
-const { getWeeklyProgress } = require('../controller/progress');
+const { getWeeklyProgress, getTrendProgress } = require('../controller/progress');
 const router = express.Router();
 
 router.get('/weekly', authenticate, getWeeklyProgress);
+router.get('/trend', authenticate, getTrendProgress);
 
 module.exports = router;

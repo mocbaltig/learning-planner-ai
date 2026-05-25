@@ -112,6 +112,7 @@ const reschedule = async (req, res, next) => {
 
     // Ambil progress minggu ini
     const week = getCurrentWeek();
+    await ProgressSnapshots.recalculateProgress(req.user.id, weekStart);
     const progress = await ProgressSnapshots.getProgress(req.user.id, week);
 
     const baseContext = {
