@@ -102,9 +102,10 @@ const reschedule = async (req, res, next) => {
       return next(new ClientError('task_ids harus berupa array UUID yang tidak kosong'));
     }
 
-    const overdueTasks = await Tasks.findTasksByIds(task_ids);
+    const overdueTasks = await Tasks.findOverdueTasksByIds(req.user.id, task_ids);
     const weekStart = getCurrentWeekStart();
     const weekTasks = await Tasks.findTasksByWeek(req.user.id, weekStart);
+    const todoWeekTasks = weekTasks.filter((t) => t.status === 'todo');
 
     // Ambil profile untuk availability
     const profile = await Profiles.getProfile(req.user.id);
@@ -113,27 +114,62 @@ const reschedule = async (req, res, next) => {
     const week = getCurrentWeek();
     const progress = await ProgressSnapshots.getProgress(req.user.id, week);
 
-    const context = {
+    const baseContext = {
       overdue_tasks: overdueTasks.map((t) => ({
         id: t.id,
         title: t.title,
         duration_estimate: t.duration_estimate,
         original_date: t.planned_date,
       })),
-      current_week_tasks: weekTasks
-        .filter((t) => t.status === 'todo')
-        .map((t) => ({
-          planned_date: t.planned_date,
-          planned_slot: t.planned_slot,
-          duration_estimate: t.duration_estimate,
-        })),
+      current_week_tasks: todoWeekTasks.map((t) => ({
+        planned_date: t.planned_date,
+        planned_slot: t.planned_slot,
+        duration_estimate: t.duration_estimate,
+      })),
       availability: profile?.availability || {},
       remaining_capacity:
         (profile?.weekly_target_hours || 5) - (progress?.completed_hours || 0),
     };
 
-    const raw = await callLLM('reschedule', context);
-    const validated = validateAIOutput(raw);
+    function findConflicts(proposed, existing) {
+      const dateStr = (d) => (d instanceof Date ? d.toISOString().split('T')[0] : d);
+      const existingKeys = new Set(existing.map((t) => `${dateStr(t.planned_date)}|${t.planned_slot}`));
+      const proposedKeys = new Set();
+      const conflicts = [];
+      for (const t of proposed) {
+        const key = `${t.planned_date}|${t.planned_slot}`;
+        if (existingKeys.has(key) || proposedKeys.has(key)) {
+          conflicts.push({ date: t.planned_date, slot: t.planned_slot, title: t.title });
+        }
+        proposedKeys.add(key);
+      }
+      return conflicts;
+    }
+
+    const MAX_RETRIES = 2;
+    let validated = null;
+    let usedContext = baseContext;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      const raw = await callLLM('reschedule', usedContext);
+      validated = validateAIOutput(raw);
+      if (!validated) continue;
+
+      const conflicts = findConflicts(validated.tasks, todoWeekTasks);
+      if (!conflicts.length) break;
+
+      if (attempt < MAX_RETRIES) {
+        const dateStr = (d) => (d instanceof Date ? d.toISOString().split('T')[0] : d);
+        const occupiedSlots = [...new Set(todoWeekTasks.map((t) => `${dateStr(t.planned_date)} ${t.planned_slot}`))];
+        usedContext = {
+          ...baseContext,
+          occupied_slots: occupiedSlots,
+          conflict_warning: `HINDARI slot yang sudah terisi: ${occupiedSlots.join(', ')}. Jangan jadwalkan task di slot tersebut.`,
+        };
+      }
+
+      validated = null;
+    }
 
     if (!validated) {
       return next(
@@ -147,7 +183,7 @@ const reschedule = async (req, res, next) => {
     await AIRecommendations.create({
       user_id: req.user.id,
       type: 'reschedule',
-      input_context: JSON.stringify(context),
+      input_context: JSON.stringify(usedContext),
       output: JSON.stringify(validated),
     });
 

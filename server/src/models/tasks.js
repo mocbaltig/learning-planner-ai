@@ -72,6 +72,21 @@ class Tasks {
     return result.rows;
   }
 
+  async findOverdueTasksByIds(userId, taskIds) {
+    if (!taskIds || !taskIds.length) return [];
+    const today = new Date().toISOString().split('T')[0];
+    const result = await db.query(
+      `SELECT * FROM tasks
+       WHERE goal_id IN (SELECT id FROM goals WHERE user_id = $1)
+       AND planned_date < $2
+       AND status = 'todo'
+       AND id = ANY($3)
+       ORDER BY planned_date ASC`,
+      [userId, today, taskIds],
+    );
+    return result.rows;
+  }
+
   async findOverdueTasks(userId) {
     const today = new Date().toISOString().split('T')[0];
     const result = await db.query(
