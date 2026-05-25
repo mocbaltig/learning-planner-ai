@@ -20,11 +20,15 @@ const getAllGoals = async (req, res, next) => {
 };
 
 const getGoalById = async (req, res, next) => {
-  const goal = await Goals.findById(req.params.id, req.user.id);
-  if (!goal) {
-    return next(new NotFoundError('Goal tidak ditemukan'));
+  try {
+    const goal = await Goals.findById(req.params.id);
+    if (!goal) {
+      return next(new NotFoundError('Goal tidak ditemukan'));
+    }
+    res.json(goal);
+  } catch (err) {
+    next(err);
   }
-  res.json(goal);
 };
 
 const editGoalById = async (req, res, next) => {

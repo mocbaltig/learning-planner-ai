@@ -21,7 +21,35 @@ class Goals {
   }
 
   async findById(id) {
-    const result = await db.query('SELECT * FROM goals WHERE id = $1', [id]);
+    const result = await db.query(
+      `
+      SELECT 
+          g.*,
+          COALESCE(
+              (
+                  SELECT json_agg(
+                      json_build_object(
+                          'id', t.id,
+                          'title', t.title,
+                          'description', t.description,
+                          'duration_estimate', t.duration_estimate,
+                          'planned_date', t.planned_date,
+                          'planned_slot', t.planned_slot,
+                          'status', t.status,
+                          'actual_duration', t.actual_duration,
+                          'completed_at', t.completed_at,
+                          'rationale', t.rationale,
+                          'created_at', t.created_at
+                      )
+                  )
+                  FROM tasks t
+                  WHERE t.goal_id = g.id
+              ), 
+              '[]'::json
+          ) AS tasks
+      FROM goals g WHERE g.id = $1`,
+      [id],
+    );
     return result.rows[0];
   }
 
