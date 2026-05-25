@@ -131,6 +131,22 @@ class Tasks {
     const result = await db.query(updateQuery, updateParams);
     return result.rows[0];
   }
+
+  async updateTask(taskId, fields) {
+    if (Object.keys(fields).length === 0) return null;
+    const result = await db.query(
+      `UPDATE tasks SET
+        title = COALESCE($2, title),
+        description = COALESCE($3, description),
+        planned_date = COALESCE($4, planned_date),
+        planned_slot = COALESCE($5, planned_slot),
+        duration_estimate = COALESCE($6, duration_estimate),
+        rationale = COALESCE($7, rationale)
+       WHERE id = $1 RETURNING *`,
+      [taskId, fields.title, fields.description, fields.planned_date, fields.planned_slot, fields.duration_estimate, fields.rationale],
+    );
+    return result.rows[0] || null;
+  }
 }
 
 module.exports = new Tasks();

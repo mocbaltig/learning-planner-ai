@@ -14,4 +14,13 @@ const taskPayloadSchema = z.object({
   rationale: z.string().optional(),
 });
 
-module.exports = { taskPayloadSchema };
+const taskUpdatePayloadSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().optional(),
+  duration_estimate: z.number().min(25).max(90).optional(),
+  planned_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).or(z.string().datetime()).optional(),
+  planned_slot: z.enum(['morning', 'afternoon', 'evening']).optional(),
+  rationale: z.string().optional(),
+});
+
+module.exports = { taskPayloadSchema, taskUpdatePayloadSchema };

@@ -99,8 +99,33 @@ const editStatus = async (req, res, next) => {
   }
 };
 
+const editTask = async (req, res, next) => {
+  try {
+    const task = await Tasks.findTaskByIdAndUserId(req.params.id, req.user.id);
+    if (!task) {
+      return next(new NotFoundError('Task tidak ditemukan'));
+    }
+
+    const updated = await Tasks.updateTask(req.params.id, req.body);
+    if (!updated) {
+      return next(new InvariantError('Gagal mengupdate task'));
+    }
+
+    logger.info({
+      request_id: req.requestId,
+      action: 'task_updated',
+      task_id: req.params.id,
+    });
+
+    res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   createTask,
   getTasksByWeekStart,
   editStatus,
+  editTask,
 };
