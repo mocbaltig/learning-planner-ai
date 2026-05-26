@@ -157,7 +157,7 @@ export default function WeeklyCalendar({ onTaskClick }) {
       {/* Calendar grid */}
       {!loading && !error && (
         <div className='grid grid-cols-7 gap-2 min-h-[480px]'>
-          {DAYS.map(({ label, full }, dayIndex) => {
+          {DAYS.map(({ label }, dayIndex) => {
             const dateKey  = dateForIndex(weekStart, dayIndex);
             const dayTasks = tasksByDay[dateKey] || [];
             const isToday  = dateKey === today;
