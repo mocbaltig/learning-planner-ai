@@ -110,8 +110,10 @@ const reschedule = async (req, res, next) => {
     const weekTasks = await Tasks.findTasksByWeek(req.user.id, weekStart);
     const todoWeekTasks = weekTasks.filter((t) => t.status === 'todo');
 
+    // Ambil profile untuk availability
     const profile = await Profiles.getProfile(req.user.id);
 
+    // Ambil progress minggu ini
     const week = getCurrentWeek();
     await ProgressSnapshots.recalculateProgress(req.user.id, weekStart);
     const progress = await ProgressSnapshots.getProgress(req.user.id, week);
@@ -181,6 +183,7 @@ const reschedule = async (req, res, next) => {
       );
     }
 
+    // Simpan rekomendasi untuk audit
     await AIRecommendations.create({
       user_id: req.user.id,
       type: 'reschedule',

@@ -194,9 +194,86 @@ describe('GET /api/tasks with week_start query', () => {
     expect(res.status).toBe(200);
   });
   it('should satisfy task schema', async () => {
-    const taskListSchema = z.array(taskPayloadSchema);
-    const result = taskListSchema.safeParse(res.body);
+    const taskListSchema = z.record(z.coerce.date(), z.array(taskPayloadSchema));
+    const responseSchema = z.object({
+      week_start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      tasks: taskListSchema,
+    });
+    const result = responseSchema.safeParse(res.body);
     expect(result.success).toBe(true);
+  });
+});
+
+describe('PATCH /api/tasks/:id without auth', () => {
+  let res;
+  beforeAll(async () => {
+    res = await request(app)
+      .patch(`/api/tasks/${taskId}`)
+      .set('Content-Type', 'application/json')
+      .send({ title: 'Hacked Title' });
+  });
+  it('should have 401 status code', async () => {
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('PATCH /api/tasks/:id with invalid body', () => {
+  let res;
+  beforeAll(async () => {
+    res = await request(app)
+      .patch(`/api/tasks/${taskId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({ planned_slot: 'midnight', duration_estimate: 200 });
+  });
+  it('should have 400 status code', async () => {
+    expect(res.status).toBe(400);
+  });
+  it('should return validation error', async () => {
+    expect(res.body.error).toBe('Input tidak valid');
+  });
+});
+
+describe('PATCH /api/tasks/:id with non-existent task', () => {
+  let res;
+  beforeAll(async () => {
+    res = await request(app)
+      .patch('/api/tasks/00000000-0000-0000-0000-000000000000')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({ planned_date: '2026-02-01' });
+  });
+  it('should have 404 status code', async () => {
+    expect(res.status).toBe(404);
+  });
+  it('should return task not found', async () => {
+    expect(res.body.error).toBe('Task tidak ditemukan');
+  });
+});
+
+describe('PATCH /api/tasks/:id with valid body', () => {
+  let res;
+  beforeAll(async () => {
+    res = await request(app)
+      .patch(`/api/tasks/${taskId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        planned_date: '2026-02-01',
+        planned_slot: 'afternoon',
+        duration_estimate: 60,
+      });
+  });
+  it('should have 200 status code', async () => {
+    expect(res.status).toBe(200);
+  });
+  it('should have updated fields', async () => {
+    expect(res.body.planned_slot).toBe('afternoon');
+    expect(res.body.duration_estimate).toBe(60);
+  });
+  it('should keep unchanged fields intact', async () => {
+    expect(res.body.title).toBe('Learn React Hooks');
+    expect(res.body.source).toBe('manual');
   });
 });
 

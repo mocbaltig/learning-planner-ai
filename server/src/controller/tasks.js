@@ -103,6 +103,7 @@ const editStatus = async (req, res, next) => {
       duration_estimate: task.duration_estimate,
     });
 
+    // Recalculate progress snapshot
     if (task.planned_date) {
       await ProgressSnapshots.recalculateProgress(req.user.id, task.planned_date);
     }
