@@ -1,10 +1,10 @@
 const db = require('../utils/db');
 
 class AIRecommendations {
-  async create({ user_id, type, input_context, output }) {
+  async create({ user_id, type, input_context, output, token_count = 0 }) {
     const result = await db.query(
-      'INSERT INTO ai_recommendations (user_id, type, input_context, output) VALUES ($1, $2, $3, $4) RETURNING id',
-      [user_id, type, input_context, output],
+      'INSERT INTO ai_recommendations (user_id, type, input_context, output, token_count) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+      [user_id, type, input_context, output, token_count],
     );
     return result.rows[0].id;
   }
@@ -23,6 +23,26 @@ class AIRecommendations {
     );
     if (result.rows.length === 0) return null;
     return result.rows[0].id;
+  }
+
+  async getTokenUsage(userId, batchSize = 100) {
+    const result = await db.query(
+      `SELECT
+        batch,
+        COUNT(*)::int AS recommendation_count,
+        SUM(token_count)::int AS total_tokens
+      FROM (
+        SELECT
+          token_count,
+          CEIL(ROW_NUMBER() OVER (ORDER BY created_at DESC) / $2::numeric) AS batch
+        FROM ai_recommendations
+        WHERE user_id = $1
+      ) sub
+      GROUP BY batch
+      ORDER BY batch`,
+      [userId, batchSize],
+    );
+    return result.rows;
   }
 }
 

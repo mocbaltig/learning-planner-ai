@@ -44,25 +44,28 @@ async function callLLMReal(type, context, userId) {
     await Profiles.incrementTokenCount(userId, tokenCount);
   }
 
-  return text;
+  return { text, tokenCount };
 }
 
 async function callLLMMock(type, context, userId) {
-  return JSON.stringify({
-    tasks: [
-      {
-        title: 'Belajar React Hooks - useState dan useEffect',
-        description:
-          'Pelajari dua hooks dasar React melalui dokumentasi resmi dan praktik langsung',
-        duration_estimate: 45,
-        planned_date: '2026-05-18',
-        planned_slot: 'morning',
-        rationale:
-          'Slot pagi tersedia, durasi 45 menit sesuai preferensi sesi pendek, hooks adalah fondasi untuk komponen selanjutnya',
-      },
-    ],
-    summary: 'Rencana minggu ini fokus pada fondasi React hooks',
-  });
+  return {
+    text: JSON.stringify({
+      tasks: [
+        {
+          title: 'Belajar React Hooks - useState dan useEffect',
+          description:
+            'Pelajari dua hooks dasar React melalui dokumentasi resmi dan praktik langsung',
+          duration_estimate: 45,
+          planned_date: '2026-05-18',
+          planned_slot: 'morning',
+          rationale:
+            'Slot pagi tersedia, durasi 45 menit sesuai preferensi sesi pendek, hooks adalah fondasi untuk komponen selanjutnya',
+        },
+      ],
+      summary: 'Rencana minggu ini fokus pada fondasi React hooks',
+    }),
+    tokenCount: 0,
+  };
 }
 
 const callLLM = config.llmProvider === 'mock' ? callLLMMock : callLLMReal;
