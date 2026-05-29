@@ -45,22 +45,30 @@ cd client && npm install && npm run dev
 
 ## API endpoint
 
-| Method   | Endpoint                         | Description                               |
-| -------- | -------------------------------- | ----------------------------------------- |
-| `GET`    | `/health`                        | Health check                              |
-| `GET`    | `/metrics`                       | Metrics                                   |
-| `POST`   | `/api/auth/register`             | User registration                         |
-| `POST`   | `/api/auth/login`                | User login                                |
-| `GET`    | `/api/auth/me`                   | Get current user profile \*               |
-| `POST`   | `/api/goals`                     | Create goal \*                            |
-| `GET`    | `/api/goals`                     | List all goals \*                         |
-| `GET`    | `/api/goals/:id`                 | Get goal by ID \*                         |
-| `PATCH`  | `/api/goals/:id`                 | Update goal \*                            |
-| `DELETE` | `/api/goals/:id`                 | Delete goal \*                            |
-| `POST`   | `/api/ai/plan/suggest`           | AI plan suggestion \*                     |
-| `PATCH`  | `/api/ai/recommendations/latest` | Update latest AI recommendation status \* |
-| `PATCH`  | `/api/ai/recommendations/:id`    | Update AI recommendation by ID \*         |
-| `POST`   | `/api/tasks`                     | Create task \*                            |
+| Method   | Endpoint                         | Description                                     |
+| -------- | -------------------------------- | ----------------------------------------------- |
+| `GET`    | `/health`                        | Health check                                    |
+| `GET`    | `/metrics`                       | Metrics                                         |
+| `POST`   | `/api/auth/register`             | User registration                               |
+| `POST`   | `/api/auth/login`                | User login                                      |
+| `GET`    | `/api/auth/me`                   | Get current user profile \*                     |
+| `PATCH`  | `/api/auth/me`                   | Update profile \*                               |
+| `POST`   | `/api/goals`                     | Create goal \*                                  |
+| `GET`    | `/api/goals`                     | List all goals \*                               |
+| `GET`    | `/api/goals/:id`                 | Get goal by ID \*                               |
+| `PATCH`  | `/api/goals/:id`                 | Update goal \*                                  |
+| `DELETE` | `/api/goals/:id`                 | Delete goal \*                                  |
+| `POST`   | `/api/tasks`                     | Create task \*                                  |
+| `GET`    | `/api/tasks`                     | List tasks by week start \*                     |
+| `PATCH`  | `/api/tasks/:id/status`          | Update task status \*                           |
+| `PATCH`  | `/api/tasks/:id`                 | Update task \*                                  |
+| `POST`   | `/api/ai/plan/suggest`           | AI plan suggestion \*                           |
+| `POST`   | `/api/ai/plan/reschedule`        | AI reschedule overdue tasks \*                  |
+| `PATCH`  | `/api/ai/recommendations/latest` | Update latest AI recommendation status \*       |
+| `PATCH`  | `/api/ai/recommendations/:id`    | Update AI recommendation by ID \*               |
+| `GET`    | `/api/ai/token-usage`            | AI token usage per 100 recommendations \*       |
+| `GET`    | `/api/progress/weekly`           | Get weekly progress \*                          |
+| `GET`    | `/api/progress/trend`            | Get progress trend \*                           |
 
 > \* protected/need authentication
 
