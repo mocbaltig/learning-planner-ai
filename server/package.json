@@ -12,7 +12,8 @@
     "lint:fix": "eslint src/ tests/ --fix",
     "migrate:up": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down",
-    "migrate:create": "node-pg-migrate create"
+    "migrate:create": "node-pg-migrate create",
+    "seed": "node scripts/seed.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.0",
