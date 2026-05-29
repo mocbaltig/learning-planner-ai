@@ -42,12 +42,14 @@ const createSuggestion = async (req, res, next) => {
     };
 
     let finalOutput;
-    const raw = await callLLM('suggest', context, req.user.id);
+    let tokenCount = 0;
+    const { text: raw, tokenCount: firstTokens } = await callLLM('suggest', context, req.user.id);
     finalOutput = validateAIOutput(raw);
     if (!finalOutput) {
       // retry 1x
-      const retry = await callLLM('suggest', context, req.user.id);
-      finalOutput = validateAIOutput(retry);
+      const { text: retryRaw, tokenCount: retryTokens } = await callLLM('suggest', context, req.user.id);
+      finalOutput = validateAIOutput(retryRaw);
+      tokenCount = retryTokens;
       if (!finalOutput) {
         logger.warn({ request_id: req.requestId, action: 'ai_suggest_failed' });
         return next(
@@ -56,6 +58,8 @@ const createSuggestion = async (req, res, next) => {
           ),
         );
       }
+    } else {
+      tokenCount = firstTokens;
     }
 
     await AIRecommendations.create({
@@ -63,6 +67,7 @@ const createSuggestion = async (req, res, next) => {
       type: 'suggest',
       input_context: context,
       output: finalOutput,
+      token_count: tokenCount,
     });
 
     res.json(finalOutput);
@@ -153,14 +158,18 @@ const reschedule = async (req, res, next) => {
     const MAX_RETRIES = 2;
     let validated = null;
     let usedContext = baseContext;
+    let tokenCount = 0;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      const raw = await callLLM('reschedule', usedContext, req.user.id);
+      const { text: raw, tokenCount: attemptTokens } = await callLLM('reschedule', usedContext, req.user.id);
       validated = validateAIOutput(raw);
       if (!validated) continue;
 
       const conflicts = findConflicts(validated.tasks, todoWeekTasks);
-      if (!conflicts.length) break;
+      if (!conflicts.length) {
+        tokenCount = attemptTokens;
+        break;
+      }
 
       if (attempt < MAX_RETRIES) {
         const dateStr = (d) => (d instanceof Date ? d.toISOString().split('T')[0] : d);
@@ -189,6 +198,7 @@ const reschedule = async (req, res, next) => {
       type: 'reschedule',
       input_context: JSON.stringify(usedContext),
       output: JSON.stringify(validated),
+      token_count: tokenCount,
     });
 
     res.json(validated);
@@ -197,9 +207,19 @@ const reschedule = async (req, res, next) => {
   }
 };
 
+const getTokenUsage = async (req, res, next) => {
+  try {
+    const usage = await AIRecommendations.getTokenUsage(req.user.id, 100);
+    res.json(usage);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSuggestion,
   editLatestRecommendation,
   editRecommendationById,
   reschedule,
+  getTokenUsage,
 };

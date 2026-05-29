@@ -9,6 +9,7 @@ const {
   editLatestRecommendation,
   editRecommendationById,
   reschedule,
+  getTokenUsage,
 } = require('../controller/ai');
 
 router.post(
@@ -28,6 +29,8 @@ router.post(
 // NOTE: buat route ini karena pada `/api/ai/plan/suggest` id ai_recommendations ga dikirim ke client
 router.patch('/recommendations/latest', authenticate, editLatestRecommendation);
 router.patch('/recommendations/:id', authenticate, editRecommendationById);
+
+router.get('/token-usage', authenticate, getTokenUsage);
 
 /**
  * POST /api/ai/plan/reschedule
