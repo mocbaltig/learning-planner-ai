@@ -5,8 +5,8 @@ config.llmProvider = 'mock';
 jest.mock('../src/services/llm', () => ({
   ...jest.requireActual('../src/services/llm'),
   callLLM: jest.fn(() =>
-    Promise.resolve(
-      JSON.stringify({
+    Promise.resolve({
+      text: JSON.stringify({
         tasks: [
           {
             title: 'Mock Task',
@@ -19,7 +19,8 @@ jest.mock('../src/services/llm', () => ({
         ],
         summary: 'Mock summary',
       }),
-    ),
+      tokenCount: 0,
+    }),
   ),
 }));
 
@@ -208,7 +209,7 @@ describe('POST /api/ai/plan/suggest with valid body', () => {
 describe('POST /api/ai/plan/suggest when LLM returns invalid output twice', () => {
   let res;
   beforeAll(async () => {
-    callLLM.mockResolvedValue('invalid{{{');
+    callLLM.mockResolvedValue({ text: 'invalid{{{', tokenCount: 0 });
     res = await request(app)
       .post('/api/ai/plan/suggest')
       .set('Authorization', `Bearer ${token}`)
@@ -221,8 +222,8 @@ describe('POST /api/ai/plan/suggest when LLM returns invalid output twice', () =
   afterAll(() => {
     callLLM.mockReset();
     callLLM.mockImplementation(() =>
-      Promise.resolve(
-        JSON.stringify({
+      Promise.resolve({
+        text: JSON.stringify({
           tasks: [
             {
               title: 'Mock Task',
@@ -235,7 +236,8 @@ describe('POST /api/ai/plan/suggest when LLM returns invalid output twice', () =
           ],
           summary: 'Mock summary',
         }),
-      ),
+        tokenCount: 0,
+      }),
     );
   });
   it('should have 422 status code', async () => {
