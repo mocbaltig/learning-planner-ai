@@ -1,4 +1,4 @@
-# ADR-005: Penanganan Konflik Slot oleh LLM pada Reschedule
+# ADR-007: Penanganan Konflik Slot oleh LLM pada Reschedule
 
 ## Status
 Accepted
