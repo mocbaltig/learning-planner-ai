@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { getThisMonday, snapToMonday } from '../utils/dateUtils';
+// import { getThisMonday, snapToMonday } from '../utils/dateUtils';
 import GoalCard from '../components/GoalCard.jsx';
 import {
   Target,
