@@ -5,6 +5,7 @@ const AIRecommendations = require('../models/ai_recommendations');
 const ProgressSnapshots = require('../models/progress_snapshots');
 const { NotFoundError, UnprocessableEntityError, ClientError } = require('../exceptions');
 const { callLLM, validateAIOutput } = require('../services/llm');
+const { aiRescheduleOutputSchema } = require('../validator/ai-schema');
 const logger = require('../utils/logger');
 const { getWeekEnd, getCurrentWeekStart, getCurrentWeek } = require('../utils/week');
 
@@ -22,10 +23,14 @@ const createSuggestion = async (req, res, next) => {
     }
 
     const weekEnd = getWeekEnd(new Date(data.week_start));
-    const existingTasks = await Tasks.findByWeekStart(req.user.id, data.week_start, weekEnd);
+    const existingTasks = await Tasks.findByWeekStart(
+      req.user.id,
+      data.week_start,
+      weekEnd,
+    );
 
     const context = {
-      week_start: data.week_start,   // Gemini HARUS tahu rentang ini
+      week_start: data.week_start, // Gemini HARUS tahu rentang ini
       week_end: weekEnd,
       goal: {
         title: goal.title,
@@ -43,11 +48,19 @@ const createSuggestion = async (req, res, next) => {
 
     let finalOutput;
     let tokenCount = 0;
-    const { text: raw, tokenCount: firstTokens } = await callLLM('suggest', context, req.user.id);
+    const { text: raw, tokenCount: firstTokens } = await callLLM(
+      'suggest',
+      context,
+      req.user.id,
+    );
     finalOutput = validateAIOutput(raw);
     if (!finalOutput) {
       // retry 1x
-      const { text: retryRaw, tokenCount: retryTokens } = await callLLM('suggest', context, req.user.id);
+      const { text: retryRaw, tokenCount: retryTokens } = await callLLM(
+        'suggest',
+        context,
+        req.user.id,
+      );
       finalOutput = validateAIOutput(retryRaw);
       tokenCount = retryTokens;
       if (!finalOutput) {
@@ -142,7 +155,9 @@ const reschedule = async (req, res, next) => {
 
     function findConflicts(proposed, existing) {
       const dateStr = (d) => (d instanceof Date ? d.toISOString().split('T')[0] : d);
-      const existingKeys = new Set(existing.map((t) => `${dateStr(t.planned_date)}|${t.planned_slot}`));
+      const existingKeys = new Set(
+        existing.map((t) => `${dateStr(t.planned_date)}|${t.planned_slot}`),
+      );
       const proposedKeys = new Set();
       const conflicts = [];
       for (const t of proposed) {
@@ -161,8 +176,12 @@ const reschedule = async (req, res, next) => {
     let tokenCount = 0;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      const { text: raw, tokenCount: attemptTokens } = await callLLM('reschedule', usedContext, req.user.id);
-      validated = validateAIOutput(raw);
+      const { text: raw, tokenCount: attemptTokens } = await callLLM(
+        'reschedule',
+        usedContext,
+        req.user.id,
+      );
+      validated = validateAIOutput(raw, aiRescheduleOutputSchema);
       if (!validated) continue;
 
       const conflicts = findConflicts(validated.tasks, todoWeekTasks);
@@ -173,7 +192,11 @@ const reschedule = async (req, res, next) => {
 
       if (attempt < MAX_RETRIES) {
         const dateStr = (d) => (d instanceof Date ? d.toISOString().split('T')[0] : d);
-        const occupiedSlots = [...new Set(todoWeekTasks.map((t) => `${dateStr(t.planned_date)} ${t.planned_slot}`))];
+        const occupiedSlots = [
+          ...new Set(
+            todoWeekTasks.map((t) => `${dateStr(t.planned_date)} ${t.planned_slot}`),
+          ),
+        ];
         usedContext = {
           ...baseContext,
           occupied_slots: occupiedSlots,

@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { getThisMonday } from '../utils/dateUtils';
 import AISuggestionPanel from '../components/AISuggestionPanel.jsx';
+import AIReschedulePanel from '../components/AIReschedulePanel.jsx';
 import {
   ArrowLeft,
   Target,
@@ -365,8 +366,9 @@ export default function GoalDetail() {
   const [acceptedTasks, setAcceptedTasks]   = useState([]);
   const [hasInitialTasks, setHasInitialTasks] = useState(false);
   const [expandedTasks, setExpandedTasks]   = useState({});
-  const [showAIPanel, setShowAIPanel]       = useState(false);
-  const [showManualForm, setShowManualForm] = useState(false);
+  const [showAIPanel, setShowAIPanel]           = useState(false);
+  const [showAIReschedulePanel, setShowAIReschedulePanel] = useState(false);
+  const [showManualForm, setShowManualForm]     = useState(false);
   const [deletingId, setDeletingId]         = useState(null);
   const [reschedulingId, setReschedulingId] = useState(null); // taskId yang sedang di-reschedule
 
@@ -524,9 +526,19 @@ export default function GoalDetail() {
                 {showAIPanel ? 'Tutup AI' : 'Saran AI'}
               </button>
             )}
+            {/* Tombol Reschedule AI */}
+            {acceptedTasks.length > 0 && (
+              <button
+                onClick={() => setShowAIReschedulePanel(prev => !prev)}
+                className='flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 rounded-full px-3 py-1.5 transition-all'
+              >
+                <CalendarClock size={12} />
+                {showAIReschedulePanel ? 'Tutup' : 'Reschedule AI'}
+              </button>
+            )}
             {/* Tombol Manual */}
             <button
-              onClick={() => { setShowManualForm(prev => !prev); setShowAIPanel(false); }}
+              onClick={() => { setShowManualForm(prev => !prev); setShowAIPanel(false); setShowAIReschedulePanel(false); }}
               className={`flex items-center gap-1.5 text-xs rounded-full px-3 py-1.5 border transition-all
                 ${showManualForm
                   ? 'bg-white/10 border-white/20 text-slate-300'
@@ -538,6 +550,16 @@ export default function GoalDetail() {
             </button>
           </div>
         </div>
+
+        {/* AI Reschedule panel */}
+        {showAIReschedulePanel && (
+          <div className='mb-4'>
+            <AIReschedulePanel
+              tasks={acceptedTasks}
+              onRescheduled={handleRescheduled}
+            />
+          </div>
+        )}
 
         {/* Manual form */}
         {showManualForm && (

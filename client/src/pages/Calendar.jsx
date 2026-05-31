@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import WeeklyCalendar from '../components/WeeklyCalendar';
-import { X, Clock, Sun, Sunset, Moon, CheckCircle2, SkipForward, CalendarClock, ChevronRight } from 'lucide-react';
+import { X, Clock, Sun, Sunset, Moon, CheckCircle2, SkipForward } from 'lucide-react';
 import { api } from '../services/api';
 
 const SLOT_META = {
@@ -20,133 +20,9 @@ function formatDate(dateStr) {
   });
 }
 
-function todayISO() {
-  const d = new Date();
-  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
-}
-
-/* ── Reschedule Form ── */
-function RescheduleForm({ task, onRescheduled, onCancel }) {
-  const [date, setDate]     = useState(String(task.planned_date).split('T')[0]);
-  const [slot, setSlot]     = useState(task.planned_slot);
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState(null);
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!date) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const updated = await api.patch(`/tasks/${task.id}`, {
-        planned_date: date,
-        planned_slot: slot,
-      });
-      onRescheduled?.(updated);
-    } catch (err) {
-      setError(err.message || 'Gagal reschedule, coba lagi.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className='space-y-4'>
-      {/* Divider */}
-      <div className='flex items-center gap-3'>
-        <div className='h-px flex-1 bg-white/10' />
-        <span className='text-[10px] font-semibold uppercase tracking-widest text-slate-500'>Jadwal Baru</span>
-        <div className='h-px flex-1 bg-white/10' />
-      </div>
-
-      {/* Date picker */}
-      <div className='space-y-1.5'>
-        <label className='text-xs font-medium text-slate-400'>Tanggal</label>
-        <input
-          type='date'
-          value={date}
-          min={todayISO()}
-          onChange={e => setDate(e.target.value)}
-          required
-          className='w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white
-                     focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/30
-                     [color-scheme:dark] transition-all'
-        />
-      </div>
-
-      {/* Slot selector */}
-      <div className='space-y-1.5'>
-        <label className='text-xs font-medium text-slate-400'>Sesi Belajar</label>
-        <div className='grid grid-cols-3 gap-2'>
-          {Object.entries(SLOT_META).map(([key, meta]) => {
-            const SlotIcon = meta.Icon;
-            const active = slot === key;
-            return (
-              <button
-                key={key}
-                type='button'
-                onClick={() => setSlot(key)}
-                className={`flex flex-col items-center gap-1.5 rounded-xl border py-3 transition-all
-                  ${active
-                    ? `${meta.activeBg} ${meta.border} ${meta.color}`
-                    : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
-                  }`}
-              >
-                <SlotIcon size={16} />
-                <span className='text-[11px] font-medium'>{meta.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Error */}
-      {error && (
-        <p className='text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2'>
-          ⚠️ {error}
-        </p>
-      )}
-
-      {/* Submit row */}
-      <div className='flex gap-2'>
-        <button
-          type='button'
-          onClick={onCancel}
-          className='px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 text-sm transition-all'
-        >
-          Batal
-        </button>
-        <button
-          type='submit'
-          disabled={saving || !date}
-          className='flex-1 flex items-center justify-center gap-2 bg-indigo-500/20 hover:bg-indigo-500/30
-                     border border-indigo-500/40 text-indigo-300 rounded-xl py-2.5 text-sm font-medium
-                     transition-all disabled:opacity-50 disabled:cursor-not-allowed'
-        >
-          {saving ? (
-            <span className='flex items-center gap-2'>
-              <svg className='animate-spin h-4 w-4' viewBox='0 0 24 24' fill='none'>
-                <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4' />
-                <path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8v8H4z' />
-              </svg>
-              Menyimpan…
-            </span>
-          ) : (
-            <>
-              <CalendarClock size={15} />
-              Simpan Jadwal
-            </>
-          )}
-        </button>
-      </div>
-    </form>
-  );
-}
-
 /* ── Task Detail Drawer ── */
-function TaskDrawer({ task, onClose, onStatusChange, onRescheduled }) {
+function TaskDrawer({ task, onClose, onStatusChange }) {
   const [updating, setUpdating]       = useState(false);
-  const [showReschedule, setShowReschedule] = useState(false);
   const slot = SLOT_META[task.planned_slot] ?? SLOT_META.morning;
   const SlotIcon = slot.Icon;
 
@@ -161,11 +37,6 @@ function TaskDrawer({ task, onClose, onStatusChange, onRescheduled }) {
     } finally {
       setUpdating(false);
     }
-  }
-
-  function handleRescheduled(updated) {
-    onRescheduled?.(updated);
-    onClose();
   }
 
   return (
@@ -226,50 +97,25 @@ function TaskDrawer({ task, onClose, onStatusChange, onRescheduled }) {
           </div>
 
           {/* Actions — hanya untuk todo */}
-          {task.status === 'todo' && !showReschedule && (
-            <div className='flex flex-col gap-2 pt-1'>
-              {/* Row 1: Done + Skip */}
-              <div className='flex gap-2'>
-                <button
-                  disabled={updating}
-                  onClick={() => updateStatus('done')}
-                  className='flex-1 flex items-center justify-center gap-2 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 rounded-xl px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-50'
-                >
-                  <CheckCircle2 size={15} />
-                  Tandai Selesai
-                </button>
-                <button
-                  disabled={updating}
-                  onClick={() => updateStatus('skipped')}
-                  className='flex items-center justify-center gap-2 bg-slate-500/10 hover:bg-slate-500/20 border border-slate-500/20 text-slate-400 rounded-xl px-4 py-2.5 text-sm transition-all disabled:opacity-50'
-                >
-                  <SkipForward size={15} />
-                  Lewati
-                </button>
-              </div>
-
-              {/* Row 2: Reschedule */}
+          {task.status === 'todo' && (
+            <div className='flex gap-2 pt-1'>
               <button
                 disabled={updating}
-                onClick={() => setShowReschedule(true)}
-                className='w-full flex items-center justify-between gap-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-300 rounded-xl px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-50'
+                onClick={() => updateStatus('done')}
+                className='flex-1 flex items-center justify-center gap-2 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 rounded-xl px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-50'
               >
-                <span className='flex items-center gap-2'>
-                  <CalendarClock size={15} />
-                  Reschedule
-                </span>
-                <ChevronRight size={14} className='text-indigo-400/60' />
+                <CheckCircle2 size={15} />
+                Tandai Selesai
+              </button>
+              <button
+                disabled={updating}
+                onClick={() => updateStatus('skipped')}
+                className='flex items-center justify-center gap-2 bg-slate-500/10 hover:bg-slate-500/20 border border-slate-500/20 text-slate-400 rounded-xl px-4 py-2.5 text-sm transition-all disabled:opacity-50'
+              >
+                <SkipForward size={15} />
+                Lewati
               </button>
             </div>
-          )}
-
-          {/* Reschedule form */}
-          {task.status === 'todo' && showReschedule && (
-            <RescheduleForm
-              task={task}
-              onRescheduled={handleRescheduled}
-              onCancel={() => setShowReschedule(false)}
-            />
           )}
         </div>
       </div>
@@ -283,11 +129,6 @@ export default function Calendar() {
   const [refreshKey, setRefreshKey]     = useState(0);
 
   function handleStatusChange() {
-    setSelectedTask(null);
-    setRefreshKey(k => k + 1);
-  }
-
-  function handleRescheduled() {
     setSelectedTask(null);
     setRefreshKey(k => k + 1);
   }
@@ -327,7 +168,6 @@ export default function Calendar() {
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
           onStatusChange={handleStatusChange}
-          onRescheduled={handleRescheduled}
         />
       )}
     </div>
