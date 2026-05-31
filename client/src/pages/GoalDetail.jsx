@@ -392,6 +392,7 @@ export default function GoalDetail() {
   function handleTaskAccepted(task) {
     setAcceptedTasks(prev => [...prev, task]);
     setHasInitialTasks(true);
+    setShowAIPanel(true);
     setShowManualForm(false);
   }
 
