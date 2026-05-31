@@ -20,6 +20,7 @@ const taskUpdatePayloadSchema = z.object({
   duration_estimate: z.number().min(25).max(90).optional(),
   planned_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).or(z.string().datetime()).optional(),
   planned_slot: z.enum(['morning', 'afternoon', 'evening']).optional(),
+  source: z.enum(['manual', 'ai']).optional(),
   rationale: z.string().optional(),
 });
 

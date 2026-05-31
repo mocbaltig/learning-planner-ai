@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const config = require('../utils/config');
 const Profiles = require('../models/profiles');
-const { aiSuggestionPayloadSchema } = require('../validator/ai-schema');
+const { aiSuggestionPayloadSchema, aiRescheduleOutputSchema } = require('../validator/ai-schema');
 
 function sanitizeContext(context) {
   const sanitized = JSON.parse(JSON.stringify(context));
@@ -14,11 +14,11 @@ function sanitizeContext(context) {
   return sanitized;
 }
 
-function validateAIOutput(raw) {
+function validateAIOutput(raw, schema = aiSuggestionPayloadSchema) {
   try {
     const cleanedRaw = raw.replace(/^```json|```$/g, '').trim();
     const parsed = JSON.parse(cleanedRaw);
-    return aiSuggestionPayloadSchema.parse(parsed);
+    return schema.parse(parsed);
   } catch (error) {
     return null;
   }

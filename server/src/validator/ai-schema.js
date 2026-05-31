@@ -19,12 +19,27 @@ const aiSuggestionPayloadSchema = z.object({
   summary: z.string(),
 });
 
+const aiRescheduleTaskSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().min(1),
+  duration_estimate: z.number().min(25).max(90),
+  planned_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  planned_slot: z.enum(['morning', 'afternoon', 'evening']),
+  rationale: z.string().min(1),
+});
+
+const aiRescheduleOutputSchema = z.object({
+  tasks: z.array(aiRescheduleTaskSchema).min(1),
+  summary: z.string(),
+});
+
 const reschedulePayloadSchema = z.object({
-  tasks_ids: z.array(z.string().uuid()).min(1),
+  task_ids: z.array(z.string().uuid()).min(1),
 });
 
 module.exports = {
   clientSuggestPayloadSchema,
   aiSuggestionPayloadSchema,
+  aiRescheduleOutputSchema,
   reschedulePayloadSchema,
 };
