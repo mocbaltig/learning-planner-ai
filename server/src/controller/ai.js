@@ -247,6 +247,7 @@ const reschedule = async (req, res, next) => {
       recommendation_id: recId,
       metadata: { task_ids, week_start: weekStart },
     });
+    acceptanceRate.set(await AIRecommendations.getAcceptanceRate());
 
     res.json(validated);
   } catch (err) {
