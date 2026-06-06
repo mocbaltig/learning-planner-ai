@@ -3,6 +3,7 @@ const Profiles = require('../models/profiles');
 const Tasks = require('../models/tasks');
 const AIRecommendations = require('../models/ai_recommendations');
 const ProgressSnapshots = require('../models/progress_snapshots');
+const AuditLogs = require('../models/audit_logs');
 const { NotFoundError, UnprocessableEntityError, ClientError } = require('../exceptions');
 const { callLLM, validateAIOutput } = require('../services/llm');
 const { aiRescheduleOutputSchema } = require('../validator/ai-schema');
@@ -98,6 +99,12 @@ const editLatestRecommendation = async (req, res, next) => {
       return next(new NotFoundError('AI recommendations tidak ditemukan'));
     }
     await AIRecommendations.updateStatus(recommendation.id, status);
+    await AuditLogs.create({
+      user_id: req.user.id,
+      action: `recommendation_${status}`,
+      recommendation_id: recommendation.id,
+      metadata: { status },
+    });
     acceptanceRate.set(await AIRecommendations.getAcceptanceRate());
     res.json({ id: recommendation.id, status });
   } catch (error) {
@@ -107,12 +114,19 @@ const editLatestRecommendation = async (req, res, next) => {
 
 const editRecommendationById = async (req, res, next) => {
   try {
-    const result = await AIRecommendations.updateStatus(req.params.id, req.body.status);
-    if (!result) {
+    const rec = await AIRecommendations.findById(req.params.id);
+    if (!rec) {
       return next(new NotFoundError('AI recommendations tidak ditemukan'));
     }
-    return res.json({ id: result });
+    await AIRecommendations.updateStatus(rec.id, req.body.status);
+    await AuditLogs.create({
+      user_id: req.user.id,
+      action: `recommendation_${req.body.status}`,
+      recommendation_id: req.params.id,
+      metadata: { status: req.body.status },
+    });
     acceptanceRate.set(await AIRecommendations.getAcceptanceRate());
+    return res.json({ id: rec.id });
   } catch (error) {
     next(error);
   }
@@ -219,12 +233,19 @@ const reschedule = async (req, res, next) => {
     }
 
     // Simpan rekomendasi untuk audit
-    await AIRecommendations.create({
+    const recId = await AIRecommendations.create({
       user_id: req.user.id,
       type: 'reschedule',
       input_context: JSON.stringify(usedContext),
       output: JSON.stringify(validated),
       token_count: tokenCount,
+    });
+
+    await AuditLogs.create({
+      user_id: req.user.id,
+      action: 'reschedule_generated',
+      recommendation_id: recId,
+      metadata: { task_ids, week_start: weekStart },
     });
 
     res.json(validated);

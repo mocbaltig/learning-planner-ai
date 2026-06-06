@@ -619,6 +619,7 @@ afterAll(async () => {
     'DELETE FROM tasks WHERE goal_id IN (SELECT id FROM goals WHERE user_id = $1)',
     [userId],
   );
+  await db.query('DELETE FROM audit_logs where user_id = $1', [userId]);
   await db.query('DELETE FROM goals where user_id = $1', [userId]);
   await db.query('DELETE FROM ai_recommendations where user_id = $1', [userId]);
   await db.pool.end();
