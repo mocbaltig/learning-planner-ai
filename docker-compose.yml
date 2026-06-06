@@ -28,6 +28,8 @@ services:
     ports:
       - '3000:3000'
     env_file: ./server/.env
+    environment:
+      - DATABASE_URL=postgres://user:pass@db:5432/planner
     depends_on:
       db:
         condition: service_healthy
