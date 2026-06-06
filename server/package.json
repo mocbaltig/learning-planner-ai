@@ -41,7 +41,12 @@
     "collectCoverageFrom": [
       "src/**/*.js",
       "!src/index.js"
-    ]
+    ],
+    "coverageThreshold": {
+      "global": {
+        "lines": 50
+      }
+    }
   },
   "prettier": {
     "singleQuote": true,
