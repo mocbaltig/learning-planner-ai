@@ -370,6 +370,151 @@ describe('PATCH /api/ai/recommendations/:id with valid body', () => {
   });
 });
 
+describe('POST /api/ai/plan/reschedule without auth', () => {
+  let res;
+  beforeAll(async () => {
+    res = await request(app)
+      .post('/api/ai/plan/reschedule')
+      .set('Content-Type', 'application/json')
+      .send({ task_ids: ['00000000-0000-0000-0000-000000000000'] });
+  });
+  it('should have 401 status code', async () => {
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('POST /api/ai/plan/reschedule with invalid body', () => {
+  let res;
+  beforeAll(async () => {
+    res = await request(app)
+      .post('/api/ai/plan/reschedule')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({ task_ids: [] });
+  });
+  it('should have 400 status code', async () => {
+    expect(res.status).toBe(400);
+  });
+  it('Content-Type should be application/json', async () => {
+    expect(res.headers['content-type']).toBe('application/json; charset=utf-8');
+  });
+  it('should be an object', async () => {
+    expect(typeof res.body).toBe('object');
+  });
+  it('should have the error and details properties', async () => {
+    expect(res.body.error).toBe('Input tidak valid');
+    expect(typeof res.body.details).toBe('object');
+  });
+});
+
+describe('POST /api/ai/plan/reschedule with valid body', () => {
+  let res;
+  beforeAll(async () => {
+    callLLM.mockResolvedValue({
+      text: JSON.stringify({
+        tasks: [
+          {
+            id: '00000000-0000-0000-0000-000000000001',
+            title: 'Rescheduled Task',
+            duration_estimate: 45,
+            planned_date: '2026-06-08',
+            planned_slot: 'morning',
+            rationale: 'Rescheduled to available morning slot',
+          },
+        ],
+        summary: 'Rescheduled overdue tasks to this week',
+      }),
+      tokenCount: 0,
+    });
+    res = await request(app)
+      .post('/api/ai/plan/reschedule')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({ task_ids: ['00000000-0000-0000-0000-000000000000'] });
+  });
+  afterAll(() => {
+    callLLM.mockReset();
+    callLLM.mockImplementation(() =>
+      Promise.resolve({
+        text: JSON.stringify({
+          tasks: [
+            {
+              title: 'Mock Task',
+              description: 'Mock Description',
+              duration_estimate: 45,
+              planned_date: '2026-01-12',
+              planned_slot: 'morning',
+              rationale: 'Mock rationale',
+            },
+          ],
+          summary: 'Mock summary',
+        }),
+        tokenCount: 0,
+      }),
+    );
+  });
+  it('should have 200 status code', async () => {
+    expect(res.status).toBe(200);
+  });
+  it('Content-Type should be application/json', async () => {
+    expect(res.headers['content-type']).toBe('application/json; charset=utf-8');
+  });
+  it('should be an object', async () => {
+    expect(typeof res.body).toBe('object');
+  });
+  it('should return valid reschedule output schema', async () => {
+    const result = aiRescheduleOutputSchema.safeParse(res.body);
+    expect(result.success).toBe(true);
+  });
+  it('should have tasks array and summary', async () => {
+    expect(Array.isArray(res.body.tasks)).toBe(true);
+    expect(res.body.tasks.length).toBeGreaterThan(0);
+    expect(typeof res.body.summary).toBe('string');
+  });
+});
+
+describe('POST /api/ai/plan/reschedule when LLM returns invalid output', () => {
+  let res;
+  beforeAll(async () => {
+    callLLM.mockResolvedValue({ text: 'invalid{{{', tokenCount: 0 });
+    res = await request(app)
+      .post('/api/ai/plan/reschedule')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({ task_ids: ['00000000-0000-0000-0000-000000000000'] });
+  });
+  afterAll(() => {
+    callLLM.mockReset();
+    callLLM.mockImplementation(() =>
+      Promise.resolve({
+        text: JSON.stringify({
+          tasks: [
+            {
+              title: 'Mock Task',
+              description: 'Mock Description',
+              duration_estimate: 45,
+              planned_date: '2026-01-12',
+              planned_slot: 'morning',
+              rationale: 'Mock rationale',
+            },
+          ],
+          summary: 'Mock summary',
+        }),
+        tokenCount: 0,
+      }),
+    );
+  });
+  it('should have 422 status code', async () => {
+    expect(res.status).toBe(422);
+  });
+  it('should return error message', async () => {
+    expect(res.body.error).toBe(
+      'AI tidak dapat menjadwalkan ulang saat ini. Coba lagi.',
+    );
+  });
+});
+
+const { aiRescheduleOutputSchema } = require('../src/validator/ai-schema');
 const { rateLimitConfig } = require('../src/middleware/rateLimiter.js');
 describe('POST /api/ai/plan/suggest with valid body Rate Limit', () => {
   let res;
