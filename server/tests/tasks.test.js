@@ -277,6 +277,45 @@ describe('PATCH /api/tasks/:id with valid body', () => {
   });
 });
 
+describe('PATCH /api/tasks/:id/status from `todo` to `done`', () => {
+  let res;
+  beforeAll(async () => {
+    res = await request(app)
+      .patch(`/api/tasks/${taskId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        status: 'done',
+      });
+  });
+  it('should have 200 status code', async () => {
+    expect(res.status).toBe(200);
+  });
+  it('should have status of done', async () => {
+    expect(res.body.status).toBe('done');
+  });
+});
+
+describe('PATCH /api/tasks/:id/status from `done` to `todo`', () => {
+  let res;
+  beforeAll(async () => {
+    res = await request(app)
+      .patch(`/api/tasks/${taskId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        status: 'todo',
+      });
+    console.log(res.body);
+  });
+  it('should have 400 status code', async () => {
+    expect(res.status).toBe(400);
+  });
+  it("should have error message of \"Transisi dari 'done' ke 'todo' tidak diperbolehkan.\"", async () => {
+    expect(res.body.error).toBe("Transisi dari 'done' ke 'todo' tidak diperbolehkan.");
+  });
+});
+
 afterAll(async () => {
   await db.query('DELETE FROM goals where user_id = $1', [userId]);
   await db.pool.end();
