@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { register } = require('../utils/metrics');
-router.get('/', async (req, res) => {
-  res.set('Content-Type', register.contentType);
-  res.end(await register.metrics());
-});
+const { getSummary, prometheusMetrics } = require('../controller/metrics');
+const authenticate = require('../middleware/authenticate');
+
+router.get('/', prometheusMetrics);
+router.get('/summary', getSummary);
+
 module.exports = router;
