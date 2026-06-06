@@ -32,11 +32,4 @@ router.patch('/recommendations/:id', authenticate, editRecommendationById);
 
 router.get('/token-usage', authenticate, getTokenUsage);
 
-/**
- * POST /api/ai/plan/reschedule
- * Body: { task_ids: string[] } — array UUID task yang overdue
- * Meminta AI untuk menjadwalkan ulang task overdue ke minggu berjalan.
- */
-router.post('/plan/reschedule', authenticate, reschedule);
-
 module.exports = router;
