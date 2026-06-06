@@ -67,47 +67,87 @@ beforeAll(async () => {
 });
 
 describe('validateAIOutput()', () => {
+  const validTask = {
+    title: 'Initial Brainstorm & Topic Mapping for Test',
+    description:
+      'Dedicate time to recall and list all major topics and sub-topics expected on the test. Create a mind map or outline to visualize connections and identify initial areas of strength and weakness.',
+    duration_estimate: 60,
+    planned_date: '2023-10-26',
+    planned_slot: 'morning',
+    rationale:
+      'Starting with a comprehensive overview helps in understanding the scope of the test and proactively mapping out the study journey. A morning slot is often best for tasks requiring focused recall and organization.',
+  };
+
   test('should return a correct schema', async () => {
-    const raw = `\`\`\`json
-{
-  "tasks": [
-    {
-      "title": "Initial Brainstorm & Topic Mapping for Test",
-      "description": "Dedicate time to recall and list all major topics and sub-topics expected on the test. Create a mind map or outline to visualize connections and identify initial areas of strength and weakness.",
-      "duration_estimate": 60,
-      "planned_date": "2023-10-26",
-      "planned_slot": "morning",
-      "rationale": "Starting with a comprehensive overview helps in understanding the scope of the test and proactively mapping out the study journey. A morning slot is often best for tasks requiring focused recall and organization."
-    }
-  ],
-  "summary": "This initial plan for your 'test' goal focuses on structured preparation."
-}
-\`\`\``;
-    const validated = validateAIOutput(raw);
-    const result = aiSuggestionPayloadSchema.safeParse(validated);
-    expect(result.success).toBe(true);
+    const raw = {
+      tasks: [validTask],
+      summary:
+        "This initial plan for your 'test' goal focuses on structured preparation.",
+    };
+
+    const result = validateAIOutput(raw);
+    expect(result).not.toBeNull();
+    expect(result.tasks).toHaveLength(1);
+    expect(result.tasks[0].title).toBe('Initial Brainstorm & Topic Mapping for Test');
   });
 
   test('should return error details if schema is wrong', async () => {
     const raw = `\`\`\`json
-{
-  "tasks": [
-    {
-      "title": "",
-      "description": "Dedicate time to recall and list all major topics.",
-      "duration_estimate": 60,
-      "planned_date": "2023-10-26",
-      "planned_slot": "midnight",
-      "rationale": "Starting with a comprehensive overview helps in understanding the scope of the test."
-    }
-  ],
-  "summary": "This initial plan for your 'test' goal focuses on structured preparation."
-}
-\`\`\``;
-    const validated = validateAIOutput(raw);
-    const result = aiSuggestionPayloadSchema.safeParse(validated);
-    expect(result.success).toBe(false);
-    expect(result.error.issues.length).toBeGreaterThan(0);
+          {
+            "tasks": [
+              {
+                "title": "",
+                "description": "Dedicate time to recall and list all major topics.",
+                "duration_estimate": 60,
+                "planned_date": "2023-10-26",
+                "planned_slot": "midnight",
+                "rationale": "Starting with a comprehensive overview helps in understanding the scope of the test."
+              }
+            ],
+            "summary": "This initial plan for your 'test' goal focuses on structured preparation."
+          }
+          \`\`\``;
+    expect(validateAIOutput(raw)).toBeNull();
+  });
+
+  test('should reject under 25 minute duration', async () => {
+    const raw = {
+      tasks: [{ ...validTask, duration_estimate: 10 }],
+      summary: 'test',
+    };
+    expect(validateAIOutput(raw)).toBeNull();
+  });
+
+  test('should reject over 90 minute duration', async () => {
+    const raw = {
+      tasks: [{ ...validTask, duration_estimate: 100 }],
+      summary: 'test',
+    };
+    expect(validateAIOutput(raw)).toBeNull();
+  });
+
+  test('should reject response without rationale', async () => {
+    const raw = {
+      tasks: [{ ...validTask, rationale: '' }],
+      summary: 'test',
+    };
+    expect(validateAIOutput(raw)).toBeNull();
+  });
+
+  test('should reject invalid planned_slot', async () => {
+    const raw = {
+      tasks: [{ ...validTask, planned_slot: 'midnight' }],
+      summary: 'test',
+    };
+    expect(validateAIOutput(raw)).toBeNull();
+  });
+
+  test('should reject invalid JSON', async () => {
+    expect(validateAIOutput('not json')).toBeNull();
+  });
+
+  test('should reject response without tasks', async () => {
+    expect(validateAIOutput({ summary: 'test' })).toBeNull();
   });
 });
 
