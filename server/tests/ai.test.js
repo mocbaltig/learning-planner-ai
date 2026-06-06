@@ -545,8 +545,83 @@ describe('POST /api/ai/plan/suggest with valid body Rate Limit', () => {
   });
 });
 
+describe('full flow: suggest → accept → create task → verify via GET tasks', () => {
+  let suggestRes, suggestion, acceptRes, createRes, tasksRes;
+  beforeAll(async () => {
+    rateLimitConfig.disabled = true;
+    suggestRes = await request(app)
+      .post('/api/ai/plan/suggest')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({ goal_id: goalId, week_start: '2026-01-12' });
+    suggestion = suggestRes.body;
+
+    acceptRes = await request(app)
+      .patch('/api/ai/recommendations/latest')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({ status: 'accepted' });
+
+    createRes = await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        goal_id: goalId,
+        title: suggestion.tasks[0].title,
+        description: suggestion.tasks[0].description,
+        duration_estimate: suggestion.tasks[0].duration_estimate,
+        planned_date: suggestion.tasks[0].planned_date,
+        planned_slot: suggestion.tasks[0].planned_slot,
+        source: 'ai',
+        rationale: suggestion.tasks[0].rationale,
+      });
+
+    tasksRes = await request(app)
+      .get('/api/tasks?week_start=2026-01-12')
+      .set('Authorization', `Bearer ${token}`);
+  });
+  afterAll(async () => {
+    if (createRes?.body?.id) {
+      await db.query('DELETE FROM tasks WHERE id = $1', [createRes.body.id]);
+    }
+  });
+  it('suggest should return 200', async () => {
+    expect(suggestRes.status).toBe(200);
+  });
+  it('suggest should return tasks array and summary', async () => {
+    expect(Array.isArray(suggestion.tasks)).toBe(true);
+    expect(suggestion.tasks.length).toBeGreaterThan(0);
+    expect(typeof suggestion.summary).toBe('string');
+  });
+  it('accept should return 200', async () => {
+    expect(acceptRes.status).toBe(200);
+  });
+  it('accept should return status accepted', async () => {
+    expect(acceptRes.body.status).toBe('accepted');
+  });
+  it('create task should return 201', async () => {
+    expect(createRes.status).toBe(201);
+  });
+  it('create task should return task with correct title', async () => {
+    expect(createRes.body.title).toBe(suggestion.tasks[0].title);
+  });
+  it('get tasks should return 200', async () => {
+    expect(tasksRes.status).toBe(200);
+  });
+  it('get tasks should return grouped object', async () => {
+    expect(tasksRes.body).toHaveProperty('week_start');
+    expect(tasksRes.body).toHaveProperty('tasks');
+  });
+  it('get tasks should include created task', async () => {
+    const allTasks = Object.values(tasksRes.body.tasks).flat();
+    expect(allTasks.some((t) => t.id === createRes.body.id)).toBe(true);
+  });
+});
+
 afterAll(async () => {
   rateLimitConfig.disabled = true;
+  await db.query('DELETE FROM tasks WHERE goal_id IN (SELECT id FROM goals WHERE user_id = $1)', [userId]);
   await db.query('DELETE FROM goals where user_id = $1', [userId]);
   await db.query('DELETE FROM ai_recommendations where user_id = $1', [userId]);
   await db.pool.end();
