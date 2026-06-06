@@ -306,7 +306,6 @@ describe('PATCH /api/tasks/:id/status from `done` to `todo`', () => {
       .send({
         status: 'todo',
       });
-    console.log(res.body);
   });
   it('should have 400 status code', async () => {
     expect(res.status).toBe(400);
