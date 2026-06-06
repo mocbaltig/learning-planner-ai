@@ -3,8 +3,10 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
 const path = require('path');
 const config = require('../utils/config');
+const logger = require('../utils/logger');
 const Profiles = require('../models/profiles');
 const { aiSuggestionPayloadSchema } = require('../validator/ai-schema');
+const { aiRequestCount } = require('../utils/metrics');
 
 function sanitizeContext(context) {
   const sanitized = JSON.parse(JSON.stringify(context));
@@ -18,7 +20,10 @@ function validateAIOutput(raw, schema = aiSuggestionPayloadSchema) {
   try {
     // const cleanedRaw = raw.replace(/^```json|```$/g, '').trim();
     // const parsed = JSON.parse(cleanedRaw);
-    const parsed = typeof raw === 'object' ? raw : JSON.parse(raw.replace(/^```json\s*|\s*```$/g, '').trim());
+    const parsed =
+      typeof raw === 'object'
+        ? raw
+        : JSON.parse(raw.replace(/^```json\s*|\s*```$/g, '').trim());
     return schema.parse(parsed);
   } catch (error) {
     return null;
@@ -37,15 +42,42 @@ async function callLLMReal(type, context, userId) {
   const systemPrompt = loadSystemPrompt();
   const userPrompt = `Type: ${type}\nContext: ${JSON.stringify(sanitizedContext)}`;
 
-  const result = await model.generateContent([systemPrompt, userPrompt]);
-  const text = result.response.text();
+  const start = Date.now();
 
-  const tokenCount = result.response.usageMetadata?.totalTokenCount || 0;
-  if (userId && tokenCount > 0) {
-    await Profiles.incrementTokenCount(userId, tokenCount);
+  try {
+    const result = await model.generateContent([systemPrompt, userPrompt]);
+    const durationMs = Date.now() - start;
+    const text = result.response.text();
+
+    const tokenCount = result.response.usageMetadata?.totalTokenCount || 0;
+    if (userId && tokenCount > 0) {
+      await Profiles.incrementTokenCount(userId, tokenCount);
+    }
+
+    const tokenUsage = {
+      input_tokens: result.response.usageMetadata?.promptTokenCount || 0,
+      output_tokens: result.response.usageMetadata?.candidatesTokenCount || 0,
+    };
+
+    aiRequestCount.inc({ type, status: 'success' });
+    logger.info({
+      action: 'llm_call',
+      type,
+      duration_ms: durationMs,
+      ...tokenUsage,
+    });
+
+    return { text, tokenCount };
+  } catch (err) {
+    aiRequestCount.inc({ type, status: 'error' });
+    logger.error({
+      action: 'llm_call_error',
+      type,
+      error_message: err.message,
+      duration_ms: Date.now() - start,
+    });
+    throw err; // NOTE: wait what happen then? does it throw 500?
   }
-
-  return { text, tokenCount };
 }
 
 async function callLLMMock(type, context, userId) {
