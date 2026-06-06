@@ -508,9 +508,7 @@ describe('POST /api/ai/plan/reschedule when LLM returns invalid output', () => {
     expect(res.status).toBe(422);
   });
   it('should return error message', async () => {
-    expect(res.body.error).toBe(
-      'AI tidak dapat menjadwalkan ulang saat ini. Coba lagi.',
-    );
+    expect(res.body.error).toBe('AI tidak dapat menjadwalkan ulang saat ini. Coba lagi.');
   });
 });
 
@@ -546,7 +544,7 @@ describe('POST /api/ai/plan/suggest with valid body Rate Limit', () => {
 });
 
 describe('full flow: suggest → accept → create task → verify via GET tasks', () => {
-  let suggestRes, suggestion, acceptRes, createRes, tasksRes;
+  let suggestRes, suggestion, acceptRes, createRes, tasksRes, acceptedTask;
   beforeAll(async () => {
     rateLimitConfig.disabled = true;
     suggestRes = await request(app)
@@ -562,19 +560,15 @@ describe('full flow: suggest → accept → create task → verify via GET tasks
       .set('Content-Type', 'application/json')
       .send({ status: 'accepted' });
 
+    acceptedTask = suggestion.tasks[0];
     createRes = await request(app)
       .post('/api/tasks')
       .set('Authorization', `Bearer ${token}`)
       .set('Content-Type', 'application/json')
       .send({
+        ...acceptedTask,
         goal_id: goalId,
-        title: suggestion.tasks[0].title,
-        description: suggestion.tasks[0].description,
-        duration_estimate: suggestion.tasks[0].duration_estimate,
-        planned_date: suggestion.tasks[0].planned_date,
-        planned_slot: suggestion.tasks[0].planned_slot,
         source: 'ai',
-        rationale: suggestion.tasks[0].rationale,
       });
 
     tasksRes = await request(app)
@@ -621,7 +615,10 @@ describe('full flow: suggest → accept → create task → verify via GET tasks
 
 afterAll(async () => {
   rateLimitConfig.disabled = true;
-  await db.query('DELETE FROM tasks WHERE goal_id IN (SELECT id FROM goals WHERE user_id = $1)', [userId]);
+  await db.query(
+    'DELETE FROM tasks WHERE goal_id IN (SELECT id FROM goals WHERE user_id = $1)',
+    [userId],
+  );
   await db.query('DELETE FROM goals where user_id = $1', [userId]);
   await db.query('DELETE FROM ai_recommendations where user_id = $1', [userId]);
   await db.pool.end();
