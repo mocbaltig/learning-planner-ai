@@ -25,6 +25,16 @@ class AIRecommendations {
     return result.rows[0].id;
   }
 
+  async getAcceptanceRate() {
+    const result = await db.query(
+      `SELECT
+        COUNT(*) FILTER (WHERE status = 'accepted')::float /
+        NULLIF(COUNT(*) FILTER (WHERE status IS NOT NULL), 0) AS rate
+      FROM ai_recommendations`,
+    );
+    return result.rows[0].rate || 0;
+  }
+
   async getTokenUsage(userId, batchSize = 100) {
     const result = await db.query(
       `SELECT

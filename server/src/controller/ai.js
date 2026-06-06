@@ -7,6 +7,7 @@ const { NotFoundError, UnprocessableEntityError, ClientError } = require('../exc
 const { callLLM, validateAIOutput } = require('../services/llm');
 const { aiRescheduleOutputSchema } = require('../validator/ai-schema');
 const logger = require('../utils/logger');
+const { acceptanceRate } = require('../utils/metrics');
 const { getWeekEnd, getCurrentWeekStart, getCurrentWeek } = require('../utils/week');
 
 const createSuggestion = async (req, res, next) => {
@@ -97,6 +98,7 @@ const editLatestRecommendation = async (req, res, next) => {
       return next(new NotFoundError('AI recommendations tidak ditemukan'));
     }
     await AIRecommendations.updateStatus(recommendation.id, status);
+    acceptanceRate.set(await AIRecommendations.getAcceptanceRate());
     res.json({ id: recommendation.id, status });
   } catch (error) {
     next(error);
@@ -110,6 +112,7 @@ const editRecommendationById = async (req, res, next) => {
       return next(new NotFoundError('AI recommendations tidak ditemukan'));
     }
     return res.json({ id: result });
+    acceptanceRate.set(await AIRecommendations.getAcceptanceRate());
   } catch (error) {
     next(error);
   }

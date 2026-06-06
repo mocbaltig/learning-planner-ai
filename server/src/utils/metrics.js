@@ -27,9 +27,16 @@ const aiRequestCount = new client.Counter({
   registers: [register],
 });
 
+const acceptanceRate = new client.Gauge({
+  name: 'acceptance_rate',
+  help: 'Percentage of AI suggestions accepted',
+  registers: [register],
+});
+
 module.exports = {
   register,
   httpRequestCount,
   httpLatency,
   aiRequestCount,
+  acceptanceRate,
 };
