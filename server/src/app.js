@@ -19,8 +19,8 @@ app.use(cors());
 app.use(express.json());
 app.use(requestLogger);
 
-app.use('/health', requestLogger, healthRoutes);
-app.use('/metrics', requestLogger, metricsRoutes);
+app.use('/health', healthRoutes);
+app.use('/metrics', metricsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/ai', aiLimiter, aiRoutes);
