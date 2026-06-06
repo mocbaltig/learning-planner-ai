@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const config = require('../utils/config');
 const Profiles = require('../models/profiles');
-const { aiSuggestionPayloadSchema, aiRescheduleOutputSchema } = require('../validator/ai-schema');
+const { aiSuggestionPayloadSchema } = require('../validator/ai-schema');
 
 function sanitizeContext(context) {
   const sanitized = JSON.parse(JSON.stringify(context));
@@ -16,8 +16,9 @@ function sanitizeContext(context) {
 
 function validateAIOutput(raw, schema = aiSuggestionPayloadSchema) {
   try {
-    const cleanedRaw = raw.replace(/^```json|```$/g, '').trim();
-    const parsed = JSON.parse(cleanedRaw);
+    // const cleanedRaw = raw.replace(/^```json|```$/g, '').trim();
+    // const parsed = JSON.parse(cleanedRaw);
+    const parsed = typeof raw === 'object' ? raw : JSON.parse(raw.replace(/^```json\s*|\s*```$/g, '').trim());
     return schema.parse(parsed);
   } catch (error) {
     return null;
