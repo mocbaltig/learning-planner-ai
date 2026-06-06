@@ -8,6 +8,7 @@ function errorHandler(err, req, res, _next) {
     error_type: err.name,
     error_message: err.message,
     route: req.originalUrl,
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
   });
 
   if (err instanceof ClientError) {
@@ -15,9 +16,7 @@ function errorHandler(err, req, res, _next) {
   }
 
   if (err instanceof z.ZodError) {
-    return res
-      .status(400)
-      .json({ error: 'Input tidak valid', details: err.errors });
+    return res.status(400).json({ error: 'Input tidak valid', details: err.errors });
   }
 
   return res.status(500).json({ error: 'Terjadi kesalahan internal' });
