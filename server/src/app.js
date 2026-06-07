@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const { apiReference } = require('@scalar/express-api-reference');
+const { openapiSpecification } = require('./utils/swagger.js');
 
 const requestLogger = require('./middleware/requestLogger');
 const errorHandler = require('./middleware/errorHandler.js');
@@ -26,6 +28,7 @@ app.use('/api/goals', goalRoutes);
 app.use('/api/ai', aiLimiter, aiRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/progress', progressRoutes);
+app.use('/reference', apiReference({ spec: { content: openapiSpecification } }));
 
 app.use(errorHandler);
 

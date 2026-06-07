@@ -2,6 +2,16 @@ const jwt = require('jsonwebtoken');
 const config = require('../utils/config');
 const { UnauthorizedError } = require('../exceptions');
 
+/**
+ * @openapi
+ * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ */
+
 function authenticate(req, _, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

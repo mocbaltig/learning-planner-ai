@@ -2,6 +2,60 @@ const { ClientError } = require('../exceptions');
 const logger = require('../utils/logger');
 const z = require('zod');
 
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *     Error:
+ *       type: object
+ *       properties:
+ *         error:
+ *           type: string
+ *           description: Human-readable error message
+ *         details:
+ *           type: array
+ *           description: Validation error details (Zod)
+ *           items:
+ *             type: object
+ *   responses:
+ *     BadRequest:
+ *       description: Invalid input
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Error'
+ *     Unauthorized:
+ *       description: Authentication required or token expired
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Error'
+ *     NotFound:
+ *       description: Resource not found
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Error'
+ *     Conflict:
+ *       description: Resource already exists
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Error'
+ *     UnprocessableEntity:
+ *       description: AI output validation failed
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Error'
+ *     TooManyRequests:
+ *       description: Rate limit exceeded
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Error'
+ */
+
 function errorHandler(err, req, res, _next) {
   logger.error({
     request_id: req.requestId,
