@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { getThisMonday } from '../utils/dateUtils';
 import { Sun, Sunset, Moon, Clock, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import ErrorState from './ErrorState';
+import EmptyState from './EmptyState';
 
 const DAYS = [
   { label: 'Sen', full: 'Senin' },
@@ -64,6 +66,7 @@ export default function WeeklyCalendar({ onTaskClick }) {
   const [tasksByDay, setTasksByDay] = useState({});
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
   const today = todayKey();
 
   useEffect(() => {
@@ -87,7 +90,7 @@ export default function WeeklyCalendar({ onTaskClick }) {
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [weekStart]);
+  }, [weekStart, retryCount]);
 
   function shiftWeek(offset) {
     const [y, m, d] = weekStart.split('-').map(Number);
@@ -149,14 +152,24 @@ export default function WeeklyCalendar({ onTaskClick }) {
       )}
 
       {!loading && error && (
-        <div className='text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-2xl p-4'>
-          ⚠️ {error}
-        </div>
+        <ErrorState message={error} onRetry={() => setRetryCount(c => c + 1)} />
       )}
 
       {/* Calendar grid */}
       {!loading && !error && (
-        <div className='grid grid-cols-7 gap-2 min-h-[480px]'>
+        (() => {
+          const allWeekEmpty = Object.values(tasksByDay).every(d => d.length === 0) ||
+            Object.keys(tasksByDay).length === 0;
+          if (allWeekEmpty) {
+            return (
+              <EmptyState
+                type='calendar'
+                onAction={null}
+              />
+            );
+          }
+          return (
+            <div className='grid grid-cols-7 gap-2 min-h-[480px]'>
           {DAYS.map(({ label }, dayIndex) => {
             const dateKey  = dateForIndex(weekStart, dayIndex);
             const dayTasks = tasksByDay[dateKey] || [];
@@ -229,6 +242,8 @@ export default function WeeklyCalendar({ onTaskClick }) {
             );
           })}
         </div>
+          );
+        })()
       )}
     </div>
   );

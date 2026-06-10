@@ -1,6 +1,8 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { useDashboardData } from '../hooks/useDashboardData';
+import EmptyState from '../components/EmptyState';
+import ErrorState from '../components/ErrorState';
 
 // ── Helpers ────────────────────────────────────────────────────
 const slotLabel = { morning: 'Pagi', afternoon: 'Siang', evening: 'Malam' };
@@ -88,6 +90,7 @@ export default function Dashboard() {
     todayTasks,
     stats,
   } = useDashboardData();
+  const navigate = useNavigate();
 
   async function markDone(id) {
     // Optimistic update — UI responsif tanpa nunggu API
@@ -108,9 +111,8 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className='p-8 text-center text-slate-400'>
-        <p className='text-red-400 font-medium mb-1'>Gagal memuat data</p>
-        <p className='text-sm'>{error.message}</p>
+      <div className='p-8'>
+        <ErrorState message={error.message} onRetry={() => window.location.reload()} />
       </div>
     );
   }
@@ -253,12 +255,7 @@ export default function Dashboard() {
           </div>
 
           {displayTasks.length === 0 ? (
-            <div className='text-center py-8 text-slate-500 text-sm'>
-              <p>Belum ada task untuk minggu ini.</p>
-              <Link to='/goals' className='text-indigo-400 hover:text-indigo-300 mt-2 inline-block'>
-                Buat goal & generate task →
-              </Link>
-            </div>
+            <EmptyState type='tasks' onAction={() => navigate('/goals')} />
           ) : (
             <div className='space-y-3'>
               {displayTasks.map((task) => (
@@ -319,12 +316,7 @@ export default function Dashboard() {
           </div>
 
           {previewGoals.length === 0 ? (
-            <div className='text-center py-8 text-slate-500 text-sm'>
-              <p>Belum ada goal yang dibuat.</p>
-              <Link to='/goals' className='text-indigo-400 hover:text-indigo-300 mt-2 inline-block'>
-                Tambah goal pertama →
-              </Link>
-            </div>
+            <EmptyState type='goals' onAction={() => navigate('/goals')} />
           ) : (
             <div className='space-y-4'>
               {previewGoals.map((goal) => (

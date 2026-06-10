@@ -10,3 +10,4 @@ server/coverage/
 *.log
 pgdata/
 .worktrees/
+docs/

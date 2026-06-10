@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-// import { getThisMonday, snapToMonday } from '../utils/dateUtils';
 import GoalCard from '../components/GoalCard.jsx';
+import EmptyState from '../components/EmptyState';
+import ErrorState from '../components/ErrorState';
 import {
   Target,
   Plus,
@@ -13,19 +14,42 @@ import {
   Trash2,
 } from 'lucide-react';
 
+function GoalsSkeleton() {
+  return (
+    <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 animate-pulse'>
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className='bg-[#0f172a] border border-white/10 rounded-3xl p-5 space-y-3'>
+          <div className='h-4 w-3/5 bg-slate-700 rounded' />
+          <div className='h-3 w-2/5 bg-slate-800 rounded' />
+          <div className='h-2 w-full bg-slate-800 rounded-full' />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Goals() {
   const [goals, setGoals]           = useState([]);
   const [title, setTitle]           = useState('');
   const [description, setDescription] = useState('');
   const [deadline, setDeadline]     = useState('');
   const [showExtra, setShowExtra]   = useState(false);
+  const [loadingGoals, setLoadingGoals] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
   const [createError, setCreateError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.get('/goals').then(setGoals).catch(() => {});
+    let cancelled = false;
+    setLoadingGoals(true);
+    setFetchError(null);
+    api.get('/goals')
+      .then((data) => { if (!cancelled) setGoals(data); })
+      .catch((err) => { if (!cancelled) setFetchError(err.message || 'Gagal memuat goals.'); })
+      .finally(() => { if (!cancelled) setLoadingGoals(false); });
+    return () => { cancelled = true; };
   }, []);
 
   async function handleCreate(e) {
@@ -197,14 +221,12 @@ export default function Goals() {
       </div>
 
       {/* ── Goals List ── */}
-      {!goals.length ? (
-        <div className='bg-[#0f172a] border border-dashed border-white/10 rounded-3xl p-12 text-center'>
-          <div className='inline-flex items-center justify-center w-14 h-14 bg-indigo-500/10 rounded-2xl mb-4'>
-            <Target size={24} className='text-indigo-400' />
-          </div>
-          <h2 className='text-2xl font-semibold mb-3'>Belum Ada Goal</h2>
-          <p className='text-gray-400'>Mulailah membuat target belajar pertama Anda.</p>
-        </div>
+      {loadingGoals ? (
+        <GoalsSkeleton />
+      ) : fetchError ? (
+        <ErrorState message={fetchError} onRetry={() => window.location.reload()} />
+      ) : !goals.length ? (
+        <EmptyState type='goals' onAction={() => document.getElementById('goal-title-input')?.focus()} />
       ) : (
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
           {goals.map(g => (
