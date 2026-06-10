@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { TrendingUp, Clock3, CheckCircle2, Target } from 'lucide-react';
 import { api } from '../services/api';
 import { getThisMonday, toISOWeek, isoWeekToRange } from '../utils/dateUtils';
+import EmptyState from '../components/EmptyState';
+import ErrorState from '../components/ErrorState';
 
 function SkeletonCard() {
   return (
@@ -55,10 +57,13 @@ export default function Progress() {
   const [trend, setTrend] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     const week = toISOWeek(getThisMonday());
+    setLoading(true);
+    setError(null);
 
     Promise.all([
       api.get(`/progress/weekly?week=${week}`),
@@ -73,7 +78,7 @@ export default function Progress() {
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, []);
+  }, [retryCount]);
 
   const rate = snapshot ? Math.round(snapshot.completion_rate * 100) : 0;
   const planned = snapshot ? parseFloat(snapshot.planned_hours) : 0;
@@ -104,26 +109,76 @@ export default function Progress() {
   const statCards = [
     {
       title: 'Terencana',
-      value: loading ? '–' : `${planned.toFixed(1)} Jam`,
+      value: `${planned.toFixed(1)} Jam`,
       icon: Clock3,
       color: 'text-indigo-400',
       bg: 'bg-indigo-500/20',
     },
     {
       title: 'Terselesaikan',
-      value: loading ? '–' : `${completed.toFixed(1)} Jam`,
+      value: `${completed.toFixed(1)} Jam`,
       icon: CheckCircle2,
       color: 'text-emerald-400',
       bg: 'bg-emerald-500/20',
     },
     {
       title: 'Tingkat Penyelesaian',
-      value: loading ? '–' : `${rate}%`,
+      value: `${rate}%`,
       icon: Target,
       color: 'text-orange-400',
       bg: 'bg-orange-500/20',
     },
   ];
+
+  // ── Loading: full-page skeleton ──
+  if (loading) {
+    return (
+      <div className='min-h-screen bg-[#020617] text-white p-6'>
+        <div className='mb-8'>
+          <h1 className='text-3xl font-bold'>Progress Belajar</h1>
+          <p className='text-gray-400 mt-2'>Pantau perkembangan belajar Anda.</p>
+        </div>
+        <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-8'>
+          {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
+        </div>
+        <div className='grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8'>
+          <div className='bg-[#0f172a] border border-white/10 rounded-3xl p-8 flex items-center justify-center'>
+            <div className='w-52 h-52 rounded-full bg-slate-800 animate-pulse' />
+          </div>
+          <div className='bg-[#0f172a] border border-white/10 rounded-3xl p-8 animate-pulse space-y-6'>
+            {[1,2,3].map(i => (
+              <div key={i}>
+                <div className='flex justify-between mb-2'>
+                  <div className='h-4 w-24 bg-slate-700 rounded' />
+                  <div className='h-4 w-16 bg-slate-700 rounded' />
+                </div>
+                <div className='w-full h-4 bg-slate-800 rounded-full' />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className='bg-[#0f172a] border border-white/10 rounded-3xl p-8'>
+          <div className='h-48 bg-slate-800 rounded-2xl animate-pulse' />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Error: full-page ErrorState ──
+  if (error) {
+    return (
+      <div className='min-h-screen bg-[#020617] text-white p-6'>
+        <div className='mb-8'>
+          <h1 className='text-3xl font-bold'>Progress Belajar</h1>
+          <p className='text-gray-400 mt-2'>Pantau perkembangan belajar Anda.</p>
+        </div>
+        <ErrorState
+          message={error.message ?? String(error)}
+          onRetry={() => setRetryCount(c => c + 1)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className='min-h-screen bg-[#020617] text-white p-6'>
@@ -137,33 +192,24 @@ export default function Progress() {
         </p>
       </div>
 
-      {/* Error state */}
-      {error && (
-        <div className='mb-6 bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-red-400 text-sm'>
-          Gagal memuat data: {error.message}
-        </div>
-      )}
-
       {/* Stats */}
       <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-8'>
-        {loading
-          ? [1, 2, 3].map((i) => <SkeletonCard key={i} />)
-          : statCards.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.title} className='bg-[#0f172a] border border-white/10 rounded-3xl p-6'>
-                  <div className='flex items-center justify-between'>
-                    <div>
-                      <p className='text-gray-400 text-sm'>{item.title}</p>
-                      <h2 className='text-3xl font-bold mt-2'>{item.value}</h2>
-                    </div>
-                    <div className={`${item.bg} p-3 rounded-2xl`}>
-                      <Icon className={item.color} />
-                    </div>
-                  </div>
+        {statCards.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div key={item.title} className='bg-[#0f172a] border border-white/10 rounded-3xl p-6'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <p className='text-gray-400 text-sm'>{item.title}</p>
+                  <h2 className='text-3xl font-bold mt-2'>{item.value}</h2>
                 </div>
-              );
-            })}
+                <div className={`${item.bg} p-3 rounded-2xl`}>
+                  <Icon className={item.color} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Main grid */}
@@ -171,11 +217,7 @@ export default function Progress() {
 
         {/* Circular Progress */}
         <div className='bg-[#0f172a] border border-white/10 rounded-3xl p-8 flex flex-col items-center justify-center'>
-          {loading ? (
-            <div className='w-52 h-52 rounded-full bg-slate-800 animate-pulse' />
-          ) : (
-            <CircularProgress percent={rate} />
-          )}
+          <CircularProgress percent={rate} />
           <p className='text-gray-400 mt-6 text-center text-sm'>
             Konsistensi kecil setiap hari menghasilkan progress besar.
           </p>
@@ -193,49 +235,35 @@ export default function Progress() {
             </div>
           </div>
 
-          {loading ? (
-            <div className='space-y-6 animate-pulse'>
-              {[1, 2, 3].map((i) => (
-                <div key={i}>
-                  <div className='flex justify-between mb-2'>
-                    <div className='h-4 w-24 bg-slate-700 rounded' />
-                    <div className='h-4 w-16 bg-slate-700 rounded' />
-                  </div>
-                  <div className='w-full h-4 bg-slate-800 rounded-full' />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className='space-y-6'>
-              <div>
-                <div className='flex justify-between mb-2'>
-                  <span className='text-gray-300 text-sm font-medium'>Terencana</span>
-                  <span className='font-semibold text-sm text-indigo-400'>{planned.toFixed(1)} Jam</span>
-                </div>
-                <div className='w-full h-4 bg-[#111827] rounded-full overflow-hidden'>
-                  <div className='h-full bg-slate-600 rounded-full' style={{ width: '100%' }} />
-                </div>
+          <div className='space-y-6'>
+            <div>
+              <div className='flex justify-between mb-2'>
+                <span className='text-gray-300 text-sm font-medium'>Terencana</span>
+                <span className='font-semibold text-sm text-indigo-400'>{planned.toFixed(1)} Jam</span>
               </div>
-
-              <div>
-                <div className='flex justify-between mb-2'>
-                  <span className='text-gray-300 text-sm font-medium'>Terselesaikan</span>
-                  <span className='font-semibold text-sm text-emerald-400'>{completed.toFixed(1)} Jam</span>
-                </div>
-                <div className='w-full h-4 bg-[#111827] rounded-full overflow-hidden'>
-                  <div
-                    className='h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-700'
-                    style={{ width: `${Math.min((completed / (planned || 1)) * 100, 100)}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className='bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4 flex items-center justify-between'>
-                <span className='text-gray-300 text-sm'>Tingkat Penyelesaian</span>
-                <span className='text-2xl font-bold text-indigo-400'>{rate}%</span>
+              <div className='w-full h-4 bg-[#111827] rounded-full overflow-hidden'>
+                <div className='h-full bg-slate-600 rounded-full' style={{ width: '100%' }} />
               </div>
             </div>
-          )}
+
+            <div>
+              <div className='flex justify-between mb-2'>
+                <span className='text-gray-300 text-sm font-medium'>Terselesaikan</span>
+                <span className='font-semibold text-sm text-emerald-400'>{completed.toFixed(1)} Jam</span>
+              </div>
+              <div className='w-full h-4 bg-[#111827] rounded-full overflow-hidden'>
+                <div
+                  className='h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-700'
+                  style={{ width: `${Math.min((completed / (planned || 1)) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+
+            <div className='bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4 flex items-center justify-between'>
+              <span className='text-gray-300 text-sm'>Tingkat Penyelesaian</span>
+              <span className='text-2xl font-bold text-indigo-400'>{rate}%</span>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -252,13 +280,8 @@ export default function Progress() {
           </div>
         </div>
 
-        {loading ? (
-          <div className='h-48 bg-slate-800 rounded-2xl animate-pulse' />
-        ) : trend.length === 0 ? (
-          <div className='text-center py-12 text-slate-500'>
-            <p className='text-lg font-medium mb-1'>Belum ada data tren</p>
-            <p className='text-sm'>Data progress akan muncul setelah Anda mulai mengerjakan task.</p>
-          </div>
+        {trend.length === 0 ? (
+          <EmptyState type='progress' />
         ) : (
           <>
             {/* Bar chart */}
