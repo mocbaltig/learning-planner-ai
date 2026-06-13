@@ -12,6 +12,12 @@ class Tasks {
     source,
     rationale,
   }) {
+    if (rationale == null) {
+      rationale = [];
+    } else if (typeof rationale === 'string') {
+      rationale = rationale === '' ? [] : [rationale];
+    }
+    rationale = JSON.stringify(rationale);
     const result = await db.query(
       `INSERT INTO tasks
         (goal_id,
@@ -175,6 +181,12 @@ class Tasks {
 
   async updateTask(taskId, fields) {
     if (Object.keys(fields).length === 0) return null;
+    if (fields.rationale == null) {
+      fields.rationale = [];
+    } else if (typeof fields.rationale === 'string') {
+      fields.rationale = fields.rationale === '' ? [] : [fields.rationale];
+    }
+    fields.rationale = JSON.stringify(fields.rationale);
     const result = await db.query(
       `UPDATE tasks SET
         title = COALESCE($2, title),

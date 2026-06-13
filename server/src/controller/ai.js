@@ -9,6 +9,7 @@ const { callLLM, validateAIOutput } = require('../services/llm');
 const { aiRescheduleOutputSchema } = require('../validator/ai-schema');
 const logger = require('../utils/logger');
 const { acceptanceRate } = require('../utils/metrics');
+const { computeConfidence } = require('../utils/confidence');
 const { getWeekEnd, getCurrentWeekStart, getCurrentWeek } = require('../utils/week');
 
 const createSuggestion = async (req, res, next) => {
@@ -81,7 +82,7 @@ const createSuggestion = async (req, res, next) => {
       token_count: tokenCount,
     });
 
-    res.json(finalOutput);
+    res.json({ ...finalOutput, confidence: computeConfidence(context) });
   } catch (error) {
     next(error);
   }
@@ -245,7 +246,15 @@ const reschedule = async (req, res, next) => {
     });
     acceptanceRate.set(await AIRecommendations.getAcceptanceRate());
 
-    res.json(validated);
+    res.json({
+      ...validated,
+      confidence: computeConfidence({
+        week_start: weekStart,
+        weekly_target_hours: profile?.weekly_target_hours || 5,
+        preferred_time: profile?.preferred_time,
+        existing_tasks: todoWeekTasks,
+      }),
+    });
   } catch (err) {
     next(err);
   }

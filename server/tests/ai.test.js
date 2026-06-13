@@ -254,6 +254,9 @@ describe('POST /api/ai/plan/suggest with valid body', () => {
     expect(res.body.tasks.length).toBeGreaterThan(0);
     expect(typeof res.body.summary).toBe('string');
   });
+  it('should include confidence field', async () => {
+    expect(['low', 'average', 'high']).toContain(res.body.confidence);
+  });
 });
 
 describe('POST /api/ai/plan/suggest when LLM returns invalid output twice', () => {
@@ -480,6 +483,9 @@ describe('POST /api/ai/plan/reschedule with valid body', () => {
     expect(Array.isArray(res.body.tasks)).toBe(true);
     expect(res.body.tasks.length).toBeGreaterThan(0);
     expect(typeof res.body.summary).toBe('string');
+  });
+  it('should include confidence field', async () => {
+    expect(['low', 'average', 'high']).toContain(res.body.confidence);
   });
 });
 

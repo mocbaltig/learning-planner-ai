@@ -9,17 +9,18 @@ import {
   Sun,
   Sunset,
   Moon,
-  Lightbulb,
   PartyPopper,
   CalendarCheck,
   CalendarClock,
 } from 'lucide-react';
+import RationaleBox from './RationaleBox';
+import ConfidenceBadge from './ConfidenceBadge';
 
 const SLOT_META = {
   morning:   { label: 'Pagi',  Icon: Sun,    color: 'text-amber-400',   bg: 'bg-amber-500/10' },
   afternoon: { label: 'Siang', Icon: Sunset, color: 'text-orange-400',  bg: 'bg-orange-500/10' },
   evening:   { label: 'Malam', Icon: Moon,   color: 'text-indigo-400',  bg: 'bg-indigo-500/10' },
-};
+ };
 
 function LoadingSkeleton() {
   return (
@@ -177,7 +178,10 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
       {suggestions.summary && (
         <div className='bg-indigo-500/10 border border-indigo-500/20 rounded-2xl px-5 py-4 flex gap-3'>
           <Sparkles className='text-indigo-400 flex-shrink-0 mt-0.5' size={16} />
-          <p className='text-slate-300 text-sm leading-relaxed'>{suggestions.summary}</p>
+          <div className='flex-1'>
+            <p className='text-slate-300 text-sm leading-relaxed'>{suggestions.summary}</p>
+            <ConfidenceBadge level={suggestions.confidence} />
+          </div>
         </div>
       )}
 
@@ -214,17 +218,7 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
             {/* Title */}
             <h4 className='text-white font-semibold text-base leading-snug'>{task.title}</h4>
 
-            {/* Rationale — explainability */}
-            <div className='flex gap-2 bg-amber-500/5 border border-amber-500/15 rounded-xl px-3 py-2.5'>
-              <Lightbulb className='text-amber-400 flex-shrink-0 mt-0.5' size={14} />
-              {Array.isArray(task.rationale) ? (
-                <ul className='text-amber-300/80 text-xs leading-relaxed list-disc list-inside space-y-0.5'>
-                  {task.rationale.map((f, j) => <li key={j}>{f}</li>)}
-                </ul>
-              ) : (
-                <p className='text-amber-300/80 text-xs leading-relaxed'>{task.rationale}</p>
-              )}
-            </div>
+            <RationaleBox rationale={task.rationale} />
 
             {/* Meta */}
             <div className='flex flex-wrap gap-2 text-xs'>

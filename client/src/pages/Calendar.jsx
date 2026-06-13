@@ -2,6 +2,7 @@ import { useState } from 'react';
 import WeeklyCalendar from '../components/WeeklyCalendar';
 import { X, Clock, Sun, Sunset, Moon, CheckCircle2, SkipForward } from 'lucide-react';
 import { api } from '../services/api';
+import RationaleBox from '../components/RationaleBox';
 
 const SLOT_META = {
   morning:   { label: 'Pagi',  Icon: Sun,    color: 'text-amber-400',   bg: 'bg-amber-500/10',  border: 'border-amber-500/30',  activeBg: 'bg-amber-500/20'  },
@@ -76,12 +77,7 @@ function TaskDrawer({ task, onClose, onStatusChange }) {
             <p className='text-slate-400 text-sm leading-relaxed'>{task.description}</p>
           )}
 
-          {/* Rationale */}
-          {task.rationale && (
-            <div className='bg-amber-500/5 border border-amber-500/15 rounded-xl px-4 py-3'>
-              <p className='text-amber-300/80 text-xs leading-relaxed'>💡 {task.rationale}</p>
-            </div>
-          )}
+          <RationaleBox rationale={task.rationale} />
 
           {/* Meta row */}
           <div className='flex flex-wrap gap-2 text-xs'>

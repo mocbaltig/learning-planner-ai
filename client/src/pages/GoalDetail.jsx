@@ -16,13 +16,13 @@ import {
   Sun,
   Sunset,
   Moon,
-  Lightbulb,
   Plus,
   X,
   PenLine,
   Trash2,
   CalendarClock,
 } from 'lucide-react';
+import RationaleBox from '../components/RationaleBox';
 
 const SLOT_META = {
   morning:   { label: 'Pagi',  Icon: Sun,    color: 'text-amber-400',   bg: 'bg-amber-500/10',  border: 'border-amber-500/30',  activeBg: 'bg-amber-500/20'  },
@@ -630,12 +630,7 @@ export default function GoalDetail() {
                         {task.description && (
                           <p className='text-sm text-slate-300 leading-relaxed'>{task.description}</p>
                         )}
-                        {task.rationale && (
-                          <div className='flex gap-2 bg-amber-500/5 border border-amber-500/15 rounded-xl px-3 py-2.5'>
-                            <Lightbulb className='text-amber-400 flex-shrink-0 mt-0.5' size={14} />
-                            <p className='text-amber-300/80 text-xs leading-relaxed'>{task.rationale}</p>
-                          </div>
-                        )}
+                        <RationaleBox rationale={task.rationale} />
                         <div className='flex flex-wrap gap-2 text-xs'>
                           <span className='inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-slate-300'>
                             <Clock size={11} />
