@@ -6,7 +6,10 @@ export function getThisMonday() {
   const day = d.getDay(); // 0=Sun, 1=Mon …
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
 }
 
 /**
@@ -20,7 +23,10 @@ export function snapToMonday(dateStr) {
   const day = date.getDay();
   const diff = day === 0 ? 1 : 1 - day;
   date.setDate(date.getDate() + diff);
-  return date.toISOString().split('T')[0];
+  const yy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
 }
 
 /**
