@@ -11,7 +11,7 @@ const aiTaskPayloadSchema = z.object({
   duration_estimate: z.number().min(25).max(90),
   planned_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   planned_slot: z.enum(['morning', 'afternoon', 'evening']),
-  rationale: z.string().min(1),
+  rationale: z.array(z.string().min(1)).min(1),
 });
 
 const aiSuggestionPayloadSchema = z.object({
@@ -25,7 +25,7 @@ const aiRescheduleTaskSchema = z.object({
   duration_estimate: z.number().min(25).max(90),
   planned_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   planned_slot: z.enum(['morning', 'afternoon', 'evening']),
-  rationale: z.string().min(1),
+  rationale: z.array(z.string().min(1)).min(1),
 });
 
 const aiRescheduleOutputSchema = z.object({

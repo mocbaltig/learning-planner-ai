@@ -11,7 +11,7 @@ const taskPayloadSchema = z.object({
     .or(z.string().datetime()),
   planned_slot: z.enum(['morning', 'afternoon', 'evening']),
   source: z.enum(['manual', 'ai']).default('manual'),
-  rationale: z.string().optional(),
+  rationale: z.union([z.string(), z.array(z.string().min(1))]).optional(),
 });
 
 const taskUpdatePayloadSchema = z.object({
@@ -21,7 +21,7 @@ const taskUpdatePayloadSchema = z.object({
   planned_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).or(z.string().datetime()).optional(),
   planned_slot: z.enum(['morning', 'afternoon', 'evening']).optional(),
   source: z.enum(['manual', 'ai']).optional(),
-  rationale: z.string().optional(),
+  rationale: z.union([z.string(), z.array(z.string().min(1))]).optional(),
 });
 
 module.exports = { taskPayloadSchema, taskUpdatePayloadSchema };

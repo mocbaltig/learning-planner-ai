@@ -217,7 +217,13 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
             {/* Rationale — explainability */}
             <div className='flex gap-2 bg-amber-500/5 border border-amber-500/15 rounded-xl px-3 py-2.5'>
               <Lightbulb className='text-amber-400 flex-shrink-0 mt-0.5' size={14} />
-              <p className='text-amber-300/80 text-xs leading-relaxed'>{task.rationale}</p>
+              {Array.isArray(task.rationale) ? (
+                <ul className='text-amber-300/80 text-xs leading-relaxed list-disc list-inside space-y-0.5'>
+                  {task.rationale.map((f, j) => <li key={j}>{f}</li>)}
+                </ul>
+              ) : (
+                <p className='text-amber-300/80 text-xs leading-relaxed'>{task.rationale}</p>
+              )}
             </div>
 
             {/* Meta */}

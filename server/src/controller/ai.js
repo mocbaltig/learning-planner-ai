@@ -13,8 +13,8 @@ const { getWeekEnd, getCurrentWeekStart, getCurrentWeek } = require('../utils/we
 
 const createSuggestion = async (req, res, next) => {
   try {
-    const data = req.validated;
-    const goal = await Goals.findById(data.goal_id, req.user.id);
+    const { goal_id: goalId, week_start: weekStart } = req.validated;
+    const goal = await Goals.findById(goalId, req.user.id);
     if (!goal) {
       return next(new NotFoundError('Goal tidak ditemukan'));
     }
@@ -24,15 +24,11 @@ const createSuggestion = async (req, res, next) => {
       return next(new NotFoundError('Profile tidak ditemukan'));
     }
 
-    const weekEnd = getWeekEnd(new Date(data.week_start));
-    const existingTasks = await Tasks.findByWeekStart(
-      req.user.id,
-      data.week_start,
-      weekEnd,
-    );
+    const weekEnd = getWeekEnd(new Date(weekStart));
+    const existingTasks = await Tasks.findByWeekStart(req.user.id, weekStart, weekEnd);
 
     const context = {
-      week_start: data.week_start, // Gemini HARUS tahu rentang ini
+      week_start: weekStart, // Gemini HARUS tahu rentang ini
       week_end: weekEnd,
       goal: {
         title: goal.title,
