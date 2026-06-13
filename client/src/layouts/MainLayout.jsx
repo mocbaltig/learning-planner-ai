@@ -67,6 +67,8 @@ export default function MainLayout() {
         <div
           className='fixed inset-0 bg-black/50 z-20 lg:hidden'
           onClick={() => setSidebarOpen(false)}
+          role='button'
+          aria-label='Tutup sidebar'
         />
       )}
 
@@ -132,8 +134,9 @@ export default function MainLayout() {
           <button
             onClick={() => setSidebarOpen(true)}
             className='lg:hidden p-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors'
+            aria-label='Buka navigasi menu'
           >
-            <svg className='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth={2}>
+            <svg className='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth={2} aria-hidden='true'>
               <path strokeLinecap='round' strokeLinejoin='round' d='M4 6h16M4 12h16M4 18h16' />
             </svg>
           </button>

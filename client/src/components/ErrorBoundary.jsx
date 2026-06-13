@@ -7,7 +7,7 @@ import { Component } from 'react';
      render() {
        if (this.state.hasError) {
          return (
-           <div className="error-boundary">
+            <div className="error-boundary" role="alert">
              <h2>Terjadi kesalahan</h2>
              <p>Coba muat ulang halaman ini.</p>
              <button onClick={() => window.location.reload()}>Muat ulang</button>

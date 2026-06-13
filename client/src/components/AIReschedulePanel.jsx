@@ -24,7 +24,7 @@ const SLOT_META = {
 
 function LoadingSkeleton() {
   return (
-    <div className='space-y-4 animate-pulse' aria-busy='true' aria-label='Memuat saran reschedule'>
+    <div className='space-y-4 animate-pulse' aria-busy='true' aria-label='Memuat saran reschedule' aria-live='polite' role='region'>
       <div className='h-4 bg-white/5 rounded-full w-3/4' />
       <div className='h-4 bg-white/5 rounded-full w-1/2' />
       {[1, 2, 3].map((i) => (
@@ -44,7 +44,7 @@ function LoadingSkeleton() {
 
 function ErrorState({ message, onRetry }) {
   return (
-    <div className='bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center space-y-3'>
+    <div className='bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center space-y-3' role='alert'>
       <p className='text-red-400 font-medium'>⚠️ {message}</p>
       <button
         onClick={onRetry}
@@ -174,7 +174,7 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
 
   /* ── Render: SUGGESTIONS ── */
   return (
-    <div className='space-y-4'>
+    <div className='space-y-4' aria-live='polite' role='region'>
       {suggestions.summary && (
         <div className='bg-indigo-500/10 border border-indigo-500/20 rounded-2xl px-5 py-4 flex gap-3'>
           <Sparkles className='text-indigo-400 flex-shrink-0 mt-0.5' size={16} />
@@ -261,7 +261,7 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
       })}
 
       {/* Progress counter */}
-      <p className='text-center text-slate-500 text-xs'>
+      <p className='text-center text-slate-500 text-xs' aria-live='polite'>
         {Object.keys(taskStates).length} dari {suggestions.tasks.length} saran sudah diproses
       </p>
     </div>

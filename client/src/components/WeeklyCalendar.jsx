@@ -119,14 +119,16 @@ export default function WeeklyCalendar({ onTaskClick }) {
           <button
             onClick={() => shiftWeek(-1)}
             className='p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all'
+            aria-label='Minggu sebelumnya'
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={16} aria-hidden='true' />
           </button>
           <button
             onClick={() => shiftWeek(1)}
             className='p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all'
+            aria-label='Minggu berikutnya'
           >
-            <ChevronRight size={16} />
+            <ChevronRight size={16} aria-hidden='true' />
           </button>
           <h2 className='text-base font-semibold text-white ml-1 capitalize'>{weekLabel}</h2>
         </div>
@@ -141,7 +143,7 @@ export default function WeeklyCalendar({ onTaskClick }) {
 
       {/* Loading / Error */}
       {loading && (
-        <div className='grid grid-cols-7 gap-2'>
+        <div className='grid grid-cols-7 gap-2' aria-label='Memuat kalender' aria-live='polite' aria-busy='true'>
           {DAYS.map(({ label }) => (
             <div key={label} className='bg-white/5 rounded-2xl h-64 animate-pulse' />
           ))}
@@ -149,7 +151,7 @@ export default function WeeklyCalendar({ onTaskClick }) {
       )}
 
       {!loading && error && (
-        <div className='text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-2xl p-4'>
+        <div className='text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-2xl p-4' role='alert'>
           ⚠️ {error}
         </div>
       )}
@@ -208,7 +210,7 @@ export default function WeeklyCalendar({ onTaskClick }) {
                             >
                               <p className='font-medium text-white line-clamp-2'>{task.title}</p>
                               <p className='text-slate-500 mt-0.5 flex items-center gap-1'>
-                                <Clock size={8} />
+                                <Clock size={8} aria-hidden='true' />
                                 {task.duration_estimate}m
                               </p>
                             </button>
@@ -220,7 +222,7 @@ export default function WeeklyCalendar({ onTaskClick }) {
 
                   {/* Empty day */}
                   {dayTasks.length === 0 && (
-                    <div className='flex-1 flex items-center justify-center'>
+                    <div className='flex-1 flex items-center justify-center' aria-hidden='true'>
                       <CalendarDays size={14} className='text-white/10' />
                     </div>
                   )}
