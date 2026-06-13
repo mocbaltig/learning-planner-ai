@@ -14,7 +14,7 @@ jest.mock('../src/services/llm', () => ({
             duration_estimate: 45,
             planned_date: '2026-01-12',
             planned_slot: 'morning',
-            rationale: 'Mock rationale',
+            rationale: ['Mock rationale'],
           },
         ],
         summary: 'Mock summary',
@@ -74,8 +74,10 @@ describe('validateAIOutput()', () => {
     duration_estimate: 60,
     planned_date: '2023-10-26',
     planned_slot: 'morning',
-    rationale:
-      'Starting with a comprehensive overview helps in understanding the scope of the test and proactively mapping out the study journey. A morning slot is often best for tasks requiring focused recall and organization.',
+    rationale: [
+      'Starting with a comprehensive overview helps in understanding the scope of the test and proactively mapping out the study journey.',
+      'A morning slot is often best for tasks requiring focused recall and organization.',
+    ],
   };
 
   test('should return a correct schema', async () => {
@@ -126,7 +128,15 @@ describe('validateAIOutput()', () => {
     expect(validateAIOutput(raw)).toBeNull();
   });
 
-  test('should reject response without rationale', async () => {
+  test('should reject response with empty rationale array', async () => {
+    const raw = {
+      tasks: [{ ...validTask, rationale: [] }],
+      summary: 'test',
+    };
+    expect(validateAIOutput(raw)).toBeNull();
+  });
+
+  test('should reject response with string rationale', async () => {
     const raw = {
       tasks: [{ ...validTask, rationale: '' }],
       summary: 'test',
@@ -271,7 +281,7 @@ describe('POST /api/ai/plan/suggest when LLM returns invalid output twice', () =
               duration_estimate: 45,
               planned_date: '2026-01-12',
               planned_slot: 'morning',
-              rationale: 'Mock rationale',
+              rationale: ['Mock rationale'],
             },
           ],
           summary: 'Mock summary',
@@ -419,7 +429,7 @@ describe('POST /api/ai/plan/reschedule with valid body', () => {
             duration_estimate: 45,
             planned_date: '2026-06-08',
             planned_slot: 'morning',
-            rationale: 'Rescheduled to available morning slot',
+            rationale: ['Rescheduled to available morning slot'],
           },
         ],
         summary: 'Rescheduled overdue tasks to this week',
@@ -444,7 +454,7 @@ describe('POST /api/ai/plan/reschedule with valid body', () => {
               duration_estimate: 45,
               planned_date: '2026-01-12',
               planned_slot: 'morning',
-              rationale: 'Mock rationale',
+              rationale: ['Mock rationale'],
             },
           ],
           summary: 'Mock summary',
@@ -495,7 +505,7 @@ describe('POST /api/ai/plan/reschedule when LLM returns invalid output', () => {
               duration_estimate: 45,
               planned_date: '2026-01-12',
               planned_slot: 'morning',
-              rationale: 'Mock rationale',
+              rationale: ['Mock rationale'],
             },
           ],
           summary: 'Mock summary',
