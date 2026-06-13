@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import { getThisMonday } from '../utils/dateUtils';
 import { Sun, Sunset, Moon, Clock, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
@@ -101,6 +101,40 @@ export default function WeeklyCalendar({ onTaskClick }) {
 
   function goToday() { setWeekStart(getThisMonday()); }
 
+  const [focusedDayIndex, setFocusedDayIndex] = useState(-1);
+  const dayRefs = useRef([]);
+
+  useEffect(() => {
+    dayRefs.current = dayRefs.current.slice(0, 7);
+  }, []);
+
+  function handleDayKeyDown(e, dayIndex) {
+    if (e.target !== e.currentTarget) return;
+    switch (e.key) {
+      case 'ArrowLeft':
+        e.preventDefault();
+        if (dayIndex > 0) {
+          setFocusedDayIndex(dayIndex - 1);
+          dayRefs.current[dayIndex - 1]?.focus();
+        }
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        if (dayIndex < 6) {
+          setFocusedDayIndex(dayIndex + 1);
+          dayRefs.current[dayIndex + 1]?.focus();
+        }
+        break;
+      case 'Enter':
+      case ' ': {
+          e.preventDefault();
+          const firstTask = dayRefs.current[dayIndex]?.querySelector('button');
+          if (firstTask) firstTask.focus();
+          break;
+        }
+    }
+  }
+
   /* ── Header label minggu ── */
   const lastDay = dateForIndex(weekStart, 6);
   const [y1, m1] = weekStart.split('-').map(Number);
@@ -168,13 +202,17 @@ export default function WeeklyCalendar({ onTaskClick }) {
             return (
               <div
                 key={dateKey}
-                className={`flex flex-col rounded-2xl border transition-all overflow-hidden
+                tabIndex={focusedDayIndex === dayIndex ? 0 : -1}
+                ref={el => { dayRefs.current[dayIndex] = el; }}
+                onFocus={() => setFocusedDayIndex(dayIndex)}
+                onKeyDown={e => handleDayKeyDown(e, dayIndex)}
+                className={`flex flex-col rounded-2xl border transition-all overflow-hidden outline-none
                   ${isToday
                     ? 'border-indigo-500/40 bg-indigo-500/5 shadow-md shadow-indigo-500/10'
                     : isWeekend
                       ? 'border-white/5 bg-white/[0.02]'
                       : 'border-white/10 bg-[#0f172a]'
-                  }`}
+                  } focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617]`}
               >
                 {/* Day header */}
                 <div className={`px-2 py-2 text-center border-b ${isToday ? 'border-indigo-500/30' : 'border-white/5'}`}>

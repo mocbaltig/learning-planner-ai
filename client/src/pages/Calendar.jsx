@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import WeeklyCalendar from '../components/WeeklyCalendar';
 import { X, Clock, Sun, Sunset, Moon, CheckCircle2, SkipForward } from 'lucide-react';
 import { api } from '../services/api';
@@ -24,8 +24,37 @@ function formatDate(dateStr) {
 /* ── Task Detail Drawer ── */
 function TaskDrawer({ task, onClose, onStatusChange }) {
   const [updating, setUpdating]       = useState(false);
+  const closeRef = useRef(null);
+  const panelRef = useRef(null);
   const slot = SLOT_META[task.planned_slot] ?? SLOT_META.morning;
   const SlotIcon = slot.Icon;
+
+  useEffect(() => {
+    closeRef.current?.focus();
+  }, []);
+
+  function handleBackdropKeyDown(e) {
+    if (e.key === 'Escape') onClose();
+  }
+
+  function handlePanelKeyDown(e) {
+    if (e.key !== 'Tab') return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const focusable = panel.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
 
   async function updateStatus(status) {
     setUpdating(true);
@@ -44,12 +73,15 @@ function TaskDrawer({ task, onClose, onStatusChange }) {
     <div
       className='fixed inset-0 z-50 flex items-end sm:items-center justify-center'
       onClick={onClose}
+      onKeyDown={handleBackdropKeyDown}
     >
       {/* Backdrop */}
       <div className='absolute inset-0 bg-black/60 backdrop-blur-sm' />
 
       {/* Panel */}
       <div
+        ref={panelRef}
+        onKeyDown={handlePanelKeyDown}
         className='relative z-10 w-full sm:max-w-md bg-[#0f172a] border border-white/10 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl'
         style={{ maxHeight: '90vh', overflowY: 'auto' }}
         onClick={e => e.stopPropagation()}
@@ -57,6 +89,7 @@ function TaskDrawer({ task, onClose, onStatusChange }) {
         <div className='space-y-4'>
           {/* Close */}
           <button
+            ref={closeRef}
             onClick={onClose}
             className='absolute top-4 right-4 p-1.5 rounded-xl hover:bg-white/10 text-slate-400 transition-all'
           >
@@ -123,10 +156,12 @@ function TaskDrawer({ task, onClose, onStatusChange }) {
 export default function Calendar() {
   const [selectedTask, setSelectedTask] = useState(null);
   const [refreshKey, setRefreshKey]     = useState(0);
+  const lastFocusedRef = useRef(null);
 
   function handleStatusChange() {
     setSelectedTask(null);
     setRefreshKey(k => k + 1);
+    setTimeout(() => lastFocusedRef.current?.focus(), 0);
   }
 
   return (
@@ -156,13 +191,22 @@ export default function Calendar() {
       </div>
 
       {/* Weekly calendar */}
-      <WeeklyCalendar key={refreshKey} onTaskClick={setSelectedTask} />
+      <WeeklyCalendar
+        key={refreshKey}
+        onTaskClick={(task) => {
+          lastFocusedRef.current = document.activeElement;
+          setSelectedTask(task);
+        }}
+      />
 
       {/* Task detail drawer */}
       {selectedTask && (
         <TaskDrawer
           task={selectedTask}
-          onClose={() => setSelectedTask(null)}
+          onClose={() => {
+            setSelectedTask(null);
+            setTimeout(() => lastFocusedRef.current?.focus(), 0);
+          }}
           onStatusChange={handleStatusChange}
         />
       )}

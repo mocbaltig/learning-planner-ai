@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { getThisMonday } from '../utils/dateUtils';
@@ -84,6 +84,7 @@ function ManualTaskForm({ goalId, weekStart, onCreated, onCancel }) {
   return (
     <form
       onSubmit={handleSubmit}
+      onKeyDown={e => { if (e.key === 'Escape') onCancel(); }}
       className='bg-[#0c1528] border border-indigo-500/20 rounded-2xl p-5 space-y-4'
     >
       {/* Header */}
@@ -261,6 +262,7 @@ function RescheduleForm({ task, onRescheduled, onCancel }) {
     <form
       onSubmit={handleSubmit}
       onClick={e => e.stopPropagation()}
+      onKeyDown={e => { if (e.key === 'Escape') onCancel(); }}
       className='mt-3 bg-[#0c1528] border border-indigo-500/20 rounded-xl p-4 space-y-3'
     >
       <div className='flex items-center justify-between'>
@@ -371,6 +373,45 @@ export default function GoalDetail() {
   const [showManualForm, setShowManualForm]     = useState(false);
   const [deletingId, setDeletingId]         = useState(null);
   const [reschedulingId, setReschedulingId] = useState(null); // taskId yang sedang di-reschedule
+  const [focusedTaskIndex, setFocusedTaskIndex] = useState(-1);
+  const taskRefs = useRef([]);
+
+  useEffect(() => {
+    taskRefs.current = taskRefs.current.slice(0, acceptedTasks.length);
+  }, [acceptedTasks.length]);
+
+  function handleTaskKeyDown(e, index) {
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault();
+        if (index > 0) {
+          setFocusedTaskIndex(index - 1);
+          taskRefs.current[index - 1]?.focus();
+        }
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        if (index < acceptedTasks.length - 1) {
+          setFocusedTaskIndex(index + 1);
+          taskRefs.current[index + 1]?.focus();
+        }
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        toggleExpand(acceptedTasks[index].id);
+        break;
+    }
+  }
+
+  function handleTaskListKeyDown(e) {
+    if (acceptedTasks.length === 0) return;
+    if (e.key === 'ArrowDown' && focusedTaskIndex < 0) {
+      e.preventDefault();
+      setFocusedTaskIndex(0);
+      taskRefs.current[0]?.focus();
+    }
+  }
 
   function toggleExpand(taskId) {
     setExpandedTasks(prev => ({ ...prev, [taskId]: !prev[taskId] }));
@@ -584,24 +625,30 @@ export default function GoalDetail() {
             <p className='text-slate-500 text-xs mt-1'>Tambah manual atau gunakan Saran AI di atas.</p>
           </div>
         ) : (
-          <ul className='space-y-2'>
-            {acceptedTasks.map(task => {
+          <ul className='space-y-2' onKeyDown={handleTaskListKeyDown}>
+            {acceptedTasks.map((task, index) => {
               const isExpanded = expandedTasks[task.id];
               const slot = SLOT_META[task.planned_slot] || SLOT_META.morning;
               const SlotIcon = slot.Icon;
               const isManual = task.source === 'manual';
+              const isFocused = index === focusedTaskIndex;
 
               return (
                 <li
                   key={task.id}
-                  className='flex items-start gap-3 bg-white/[0.03] border border-white/10 hover:border-white/20 rounded-xl px-4 py-3 transition-colors'
+                  tabIndex={isFocused ? 0 : -1}
+                  ref={el => { taskRefs.current[index] = el; }}
+                  role='button'
+                  aria-expanded={isExpanded}
+                  onKeyDown={e => handleTaskKeyDown(e, index)}
+                  className='flex items-start gap-3 bg-white/[0.03] border border-white/10 hover:border-white/20 rounded-xl px-4 py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617]'
                 >
                   {/* Dot */}
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${isManual ? 'bg-emerald-400' : 'bg-indigo-400'}`} />
 
                   <div
                     className='flex-1 min-w-0 cursor-pointer'
-                    onClick={() => toggleExpand(task.id)}
+                    onClick={() => { setFocusedTaskIndex(index); toggleExpand(task.id); }}
                   >
                     <div className='flex justify-between items-start gap-2'>
                       <p className='text-sm font-medium text-white'>{task.title}</p>
