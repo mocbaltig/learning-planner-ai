@@ -62,6 +62,22 @@ export default function MainLayout() {
   return (
     <div className='flex h-full bg-slate-950 text-white'>
 
+      {/* Skip to content */}
+      <a
+        href='#main-content'
+        className='
+          sr-only
+          focus:not-sr-only
+          focus:fixed focus:top-4 focus:left-4 focus:z-50
+          focus:px-6 focus:py-3
+          focus:bg-indigo-600 focus:text-white
+          focus:rounded-xl focus:text-sm focus:font-semibold
+          focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-600
+        '
+      >
+        Skip to content
+      </a>
+
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -156,7 +172,7 @@ export default function MainLayout() {
         </header>
 
         {/* Page content */}
-        <main className='flex-1 overflow-y-auto'>
+        <main id='main-content' tabIndex='-1' className='flex-1 overflow-y-auto outline-none'>
           <Outlet />
         </main>
       </div>
