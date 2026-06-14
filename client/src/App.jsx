@@ -11,6 +11,7 @@ import Calendar from './pages/Calendar.jsx';
 import Progress from './pages/Progress.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
+import Observability from './pages/Observability.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 function ProtectedRoute({ children }) {
@@ -36,6 +37,7 @@ export default function App() {
             <Route path='/goals/:id' element={<GoalDetail />} />
             <Route path='/calendar' element={<Calendar />} />
             <Route path='/progress' element={<Progress />} />
+            <Route path='/observability' element={<Observability />} />
           </Route>
         </Routes>
       </BrowserRouter>

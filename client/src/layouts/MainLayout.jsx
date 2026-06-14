@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 
-const navItems = [
+const userNavItems = [
   {
     to: '/',
     label: 'Dashboard',
@@ -42,14 +42,37 @@ const navItems = [
   },
 ];
 
+const adminNavItems = [
+  {
+    to: '/observability',
+    label: 'Observability',
+    icon: (
+      <svg aria-hidden className='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth={1.8}>
+        <path strokeLinecap='round' strokeLinejoin='round' d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' />
+      </svg>
+    ),
+  },
+];
+
 export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profile, setProfile] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isAdmin = profile?.is_admin === true;
 
   useEffect(() => {
     api.get('/auth/me').then(setProfile).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (profile && isAdmin && location.pathname !== '/observability') {
+      navigate('/observability', { replace: true });
+    }
+  }, [profile, isAdmin, location.pathname, navigate]);
+
+  const navItems = isAdmin ? adminNavItems : userNavItems;
 
   const displayName = profile?.email?.split('@')[0] ?? '...';
   const initial = displayName[0]?.toUpperCase() ?? '?';

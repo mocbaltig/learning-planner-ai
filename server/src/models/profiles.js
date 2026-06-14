@@ -11,7 +11,7 @@ class Profiles {
 
   async findByUserId(userId) {
     const result = await db.query(
-      `SELECT u.id, u.email, u.created_at, p.timezone, p.preferred_time, p.weekly_target_hours, p.availability, p.llm_token_count
+      `SELECT u.id, u.email, u.created_at, u.is_admin, p.timezone, p.preferred_time, p.weekly_target_hours, p.availability, p.llm_token_count
         FROM users u
         LEFT JOIN profiles p ON p.user_id = u.id
         WHERE u.id = $1`,

@@ -99,6 +99,18 @@ async function seed() {
   );
   console.log('2. Profile created');
 
+  // 2b. Create admin user
+  const ADMIN_EMAIL = 'admin_seed@mail.com';
+  const ADMIN_PASSWORD = 'admin1234';
+  const adminPasswordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+  const adminRes = await db.query(
+    'INSERT INTO users (email, password_hash, is_admin) VALUES ($1, $2, true) RETURNING id',
+    [ADMIN_EMAIL, adminPasswordHash],
+  );
+  const adminId = adminRes.rows[0].id;
+  await db.query('INSERT INTO profiles (user_id) VALUES ($1)', [adminId]);
+  console.log('2b. Admin user created:', ADMIN_EMAIL);
+
   // 3. Create goals
   const goal1Res = await db.query(
     "INSERT INTO goals (user_id, title, description, deadline) VALUES ($1, 'Belajar React Dasar', 'Memahami fundamental React: komponen, props, state, dan hooks', $2) RETURNING id",
@@ -631,7 +643,7 @@ async function seed() {
         source,
         actual_duration || null,
         completed_at || null,
-        rationale || null,
+        rationale ? JSON.stringify(rationale) : null,
       ],
     );
   }
@@ -684,8 +696,8 @@ async function seed() {
   console.log('7. Audit logs created');
 
   console.log('\n✅ Seed complete!');
-  console.log(`   Email:    ${SEED_EMAIL}`);
-  console.log(`   Password: ${SEED_PASSWORD}`);
+  console.log(`   User:  ${SEED_EMAIL} / ${SEED_PASSWORD}`);
+  console.log(`   Admin: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
   console.log(`   This week:     ${weekStr} (${weekStart} — ${weekEnd})`);
   console.log(`   Last week:     ${lastWeekStr} (${lastMon} — ${lastSun})`);
   console.log(`   Next week:     ${nextWeekStr} (${nextMon} — ${nextSun})`);

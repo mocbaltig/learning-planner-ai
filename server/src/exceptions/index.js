@@ -4,6 +4,7 @@ const InvariantError = require('./invariant-error');
 const NotFoundError = require('./not-found-error');
 const ConflictError = require('./conflict-error');
 const UnprocessableEntityError = require('./unprocessable-entity-error');
+const ForbiddenError = require('./forbidden-error');
 
 module.exports = {
   ClientError,
@@ -12,4 +13,5 @@ module.exports = {
   UnauthorizedError,
   ConflictError,
   UnprocessableEntityError,
+  ForbiddenError,
 };
