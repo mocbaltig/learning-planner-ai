@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import {
   Sparkles,
@@ -88,6 +88,7 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
   const [error, setError]               = useState(null);
   const [taskStates, setTaskStates]     = useState({});
   const [acceptedTasks, setAcceptedTasks] = useState([]);
+  const [recommendationId, setRecommendationId] = useState(null);
 
   async function fetchReschedule() {
     if (!tasks || tasks.length === 0) return;
@@ -102,6 +103,7 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
       const taskIds = tasks.map(t => t.id);
       const data = await api.post('/ai/plan/reschedule', { task_ids: taskIds });
       setSuggestions(data);
+      setRecommendationId(data.id);
     } catch (err) {
       setError(err.message || 'Gagal memuat saran reschedule');
     } finally {
@@ -138,6 +140,14 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
   const allProcessed =
     suggestions?.tasks?.length > 0 &&
     suggestions.tasks.every((_, i) => taskStates[i] === 'accepted' || taskStates[i] === 'rejected');
+
+  /* Update recommendation status when all tasks processed */
+  useEffect(() => {
+    if (allProcessed && recommendationId) {
+      const status = acceptedTasks.length > 0 ? 'accepted' : 'rejected';
+      api.patch(`/ai/recommendations/${recommendationId}`, { status }).catch(() => {});
+    }
+  }, [allProcessed, recommendationId]);
 
   /* ── Render: IDLE ── */
   if (!suggestions && !loading && !error) {

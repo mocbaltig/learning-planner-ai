@@ -6,7 +6,6 @@ const { validate } = require('../middleware/validate');
 const { clientSuggestPayloadSchema, reschedulePayloadSchema } = require('../validator/ai-schema');
 const {
   createSuggestion,
-  editLatestRecommendation,
   editRecommendationById,
   reschedule,
   getTokenUsage,
@@ -26,8 +25,6 @@ router.post(
   reschedule,
 );
 
-// NOTE: buat route ini karena pada `/api/ai/plan/suggest` id ai_recommendations ga dikirim ke client
-router.patch('/recommendations/latest', authenticate, editLatestRecommendation);
 router.patch('/recommendations/:id', authenticate, editRecommendationById);
 
 router.get('/token-usage', authenticate, getTokenUsage);

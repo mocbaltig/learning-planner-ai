@@ -8,14 +8,6 @@ class AIRecommendations {
     );
     return result.rows[0].id;
   }
-  async findLatestByUserId(userId) {
-    const result = await db.query(
-      'SELECT id, status, type FROM ai_recommendations WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
-      [userId],
-    );
-    return result.rows[0] || null;
-  }
-
   async findById(id) {
     const result = await db.query(
       'SELECT id, status, type FROM ai_recommendations WHERE id = $1',

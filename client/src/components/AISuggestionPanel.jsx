@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { getThisMonday } from '../utils/dateUtils';
 import {
@@ -96,6 +96,7 @@ export default function AISuggestionPanel({ goalId, weekStart, onAccept }) {
   /** Map: taskIndex → 'accepted' | 'rejected' | 'loading' */
   const [taskStates, setTaskStates]     = useState({});
   const [acceptedTasks, setAcceptedTasks] = useState([]);
+  const [recommendationId, setRecommendationId] = useState(null);
 
   /* Fetch saran AI */
   async function fetchSuggestions() {
@@ -110,6 +111,7 @@ export default function AISuggestionPanel({ goalId, weekStart, onAccept }) {
         week_start: resolvedWeekStart,
       });
       setSuggestions(data);
+      setRecommendationId(data.id);
     } catch (err) {
       setError(err.message || 'Gagal memuat saran AI');
     } finally {
@@ -154,6 +156,14 @@ export default function AISuggestionPanel({ goalId, weekStart, onAccept }) {
   const allProcessed =
     suggestions?.tasks?.length > 0 &&
     suggestions.tasks.every((_, i) => taskStates[i] === 'accepted' || taskStates[i] === 'rejected');
+
+  /* Update recommendation status when all tasks processed */
+  useEffect(() => {
+    if (allProcessed && recommendationId) {
+      const status = acceptedTasks.length > 0 ? 'accepted' : 'rejected';
+      api.patch(`/ai/recommendations/${recommendationId}`, { status }).catch(() => {});
+    }
+  }, [allProcessed, recommendationId]);
 
   /* ── Render: IDLE ── */
   if (!suggestions && !loading && !error) {

@@ -74,7 +74,7 @@ const createSuggestion = async (req, res, next) => {
       tokenCount = firstTokens;
     }
 
-    await AIRecommendations.create({
+    const recId = await AIRecommendations.create({
       user_id: req.user.id,
       type: 'suggest',
       input_context: context,
@@ -82,28 +82,7 @@ const createSuggestion = async (req, res, next) => {
       token_count: tokenCount,
     });
 
-    res.json({ ...finalOutput, confidence: computeConfidence(context) });
-  } catch (error) {
-    next(error);
-  }
-};
-
-const editLatestRecommendation = async (req, res, next) => {
-  try {
-    const { status } = req.body;
-    const recommendation = await AIRecommendations.findLatestByUserId(req.user.id);
-    if (!recommendation) {
-      return next(new NotFoundError('AI recommendations tidak ditemukan'));
-    }
-    await AIRecommendations.updateStatus(recommendation.id, status);
-    await AuditLogs.create({
-      user_id: req.user.id,
-      action: `recommendation_${status}`,
-      recommendation_id: recommendation.id,
-      metadata: { status },
-    });
-    acceptanceRate.set(await AIRecommendations.getAcceptanceRate());
-    res.json({ id: recommendation.id, status });
+    res.json({ id: recId, ...finalOutput, confidence: computeConfidence(context) });
   } catch (error) {
     next(error);
   }
@@ -247,6 +226,7 @@ const reschedule = async (req, res, next) => {
     acceptanceRate.set(await AIRecommendations.getAcceptanceRate());
 
     res.json({
+      id: recId,
       ...validated,
       confidence: computeConfidence({
         week_start: weekStart,
@@ -271,7 +251,6 @@ const getTokenUsage = async (req, res, next) => {
 
 module.exports = {
   createSuggestion,
-  editLatestRecommendation,
   editRecommendationById,
   reschedule,
   getTokenUsage,
