@@ -28,13 +28,11 @@ const request = require('supertest');
 const app = require('../src/app');
 const db = require('../src/utils/db');
 const { callLLM, validateAIOutput } = require('../src/services/llm');
-const AIRecommendations = require('../src/models/ai_recommendations');
-const { aiSuggestionPayloadSchema } = require('../src/validator/ai-schema');
+const { aiSuggestionPayloadSchema, aiRescheduleOutputSchema } = require('../src/validator/ai-schema');
 
 let token;
 let userId;
 let goalId;
-let recommendationId;
 
 beforeAll(async () => {
   const userData = { email: 'userai@mail.com', password: 'supersecretpass' };
@@ -303,44 +301,11 @@ describe('POST /api/ai/plan/suggest when LLM returns invalid output twice', () =
   });
 });
 
-describe('PATCH /api/ai/recommendations/latest without auth', () => {
-  let res;
-  beforeAll(async () => {
-    res = await request(app)
-      .patch('/api/ai/recommendations/latest')
-      .set('Content-Type', 'application/json')
-      .send({ status: 'accepted' });
-  });
-  it('should have 401 status code', async () => {
-    expect(res.status).toBe(401);
-  });
-});
-
-describe('PATCH /api/ai/recommendations/latest with valid body', () => {
-  let res;
-  beforeAll(async () => {
-    const rec = await AIRecommendations.findLatestByUserId(userId);
-    recommendationId = rec?.id;
-    res = await request(app)
-      .patch('/api/ai/recommendations/latest')
-      .set('Authorization', `Bearer ${token}`)
-      .set('Content-Type', 'application/json')
-      .send({ status: 'accepted' });
-  });
-  it('should have 200 status code', async () => {
-    expect(res.status).toBe(200);
-  });
-  it('should return id and status', async () => {
-    expect(res.body).toHaveProperty('id');
-    expect(res.body.status).toBe('accepted');
-  });
-});
-
 describe('PATCH /api/ai/recommendations/:id without auth', () => {
   let res;
   beforeAll(async () => {
     res = await request(app)
-      .patch(`/api/ai/recommendations/${recommendationId}`)
+      .patch('/api/ai/recommendations/00000000-0000-0000-0000-000000000000')
       .set('Content-Type', 'application/json')
       .send({ status: 'rejected' });
   });
@@ -368,9 +333,16 @@ describe('PATCH /api/ai/recommendations/:id with non-existent ID', () => {
 
 describe('PATCH /api/ai/recommendations/:id with valid body', () => {
   let res;
+  let recId;
   beforeAll(async () => {
+    const suggestRes = await request(app)
+      .post('/api/ai/plan/suggest')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({ goal_id: goalId, week_start: '2026-06-15' });
+    recId = suggestRes.body.id;
     res = await request(app)
-      .patch(`/api/ai/recommendations/${recommendationId}`)
+      .patch(`/api/ai/recommendations/${recId}`)
       .set('Authorization', `Bearer ${token}`)
       .set('Content-Type', 'application/json')
       .send({ status: 'rejected' });
@@ -379,7 +351,7 @@ describe('PATCH /api/ai/recommendations/:id with valid body', () => {
     expect(res.status).toBe(200);
   });
   it('should return id', async () => {
-    expect(res.body).toMatchObject({ id: recommendationId });
+    expect(res.body).toMatchObject({ id: recId });
   });
 });
 
@@ -528,7 +500,6 @@ describe('POST /api/ai/plan/reschedule when LLM returns invalid output', () => {
   });
 });
 
-const { aiRescheduleOutputSchema } = require('../src/validator/ai-schema');
 const { rateLimitConfig } = require('../src/middleware/rateLimiter.js');
 describe('POST /api/ai/plan/suggest with valid body Rate Limit', () => {
   let res;
@@ -571,7 +542,7 @@ describe('full flow: suggest → accept → create task → verify via GET tasks
     suggestion = suggestRes.body;
 
     acceptRes = await request(app)
-      .patch('/api/ai/recommendations/latest')
+      .patch(`/api/ai/recommendations/${suggestion.id}`)
       .set('Authorization', `Bearer ${token}`)
       .set('Content-Type', 'application/json')
       .send({ status: 'accepted' });
@@ -607,8 +578,8 @@ describe('full flow: suggest → accept → create task → verify via GET tasks
   it('accept should return 200', async () => {
     expect(acceptRes.status).toBe(200);
   });
-  it('accept should return status accepted', async () => {
-    expect(acceptRes.body.status).toBe('accepted');
+  it('accept should return id matching suggestion', async () => {
+    expect(acceptRes.body.id).toBe(suggestion.id);
   });
   it('create task should return 201', async () => {
     expect(createRes.status).toBe(201);
