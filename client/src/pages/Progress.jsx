@@ -2,20 +2,7 @@ import { useEffect, useState } from 'react';
 import { TrendingUp, Clock3, CheckCircle2, Target } from 'lucide-react';
 import { api } from '../services/api';
 import { getThisMonday, toISOWeek, isoWeekToRange } from '../utils/dateUtils';
-
-function SkeletonCard() {
-  return (
-    <div className='bg-[#0f172a] border border-white/10 rounded-3xl p-6 animate-pulse'>
-      <div className='flex items-center justify-between'>
-        <div className='space-y-2'>
-          <div className='h-3 w-24 bg-slate-700 rounded' />
-          <div className='h-8 w-16 bg-slate-700 rounded' />
-        </div>
-        <div className='w-12 h-12 bg-slate-700 rounded-2xl' />
-      </div>
-    </div>
-  );
-}
+import LoadingState from '../components/ui/LoadingState';
 
 function CircularProgress({ percent }) {
   const CIRCUMFERENCE = 327;
@@ -155,11 +142,13 @@ export default function Progress() {
         </div>
       )}
 
+      {!error && (<>
       {/* Stats */}
-      <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-8'>
-        {loading
-          ? [1, 2, 3].map((i) => <SkeletonCard key={i} />)
-          : statCards.map((item) => {
+      {loading ? (
+        <LoadingState variant='stat' count={3} />
+      ) : (
+        <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-8'>
+          {statCards.map((item) => {
               const Icon = item.icon;
               return (
                 <div key={item.title} className='bg-[#0f172a] border border-white/10 rounded-3xl p-6'>
@@ -176,6 +165,7 @@ export default function Progress() {
               );
             })}
       </div>
+      )}
 
       {/* Main grid */}
       <div className='grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8'>
@@ -311,11 +301,12 @@ export default function Progress() {
                 <p className='text-xl font-bold text-orange-400'>
                   {totalCompleted.toFixed(1)} / {totalPlanned.toFixed(1)}
                 </p>
-              </div>
             </div>
+          </div>
           </>
         )}
       </div>
+    </>)}
     </div>
   );
 }

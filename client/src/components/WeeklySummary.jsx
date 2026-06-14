@@ -1,7 +1,7 @@
 export default function WeeklySummary({
-  hourPlanned,
-  hourDone,
-  completionRate,
+  hourPlanned = 0,
+  hourDone = 0,
+  completionRate = 0,
 }) {
   return (
     <section className='weekly-summary-container' aria-label='Ringkasan mingguan' aria-live='polite'>

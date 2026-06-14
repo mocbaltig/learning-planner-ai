@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import { getThisMonday } from '../utils/dateUtils';
 import { Sun, Sunset, Moon, Clock, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import EmptyState from './ui/EmptyState';
 
 const DAYS = [
   { label: 'Sen', full: 'Senin' },
@@ -197,7 +198,11 @@ export default function WeeklyCalendar({ onTaskClick }) {
       )}
 
       {/* Calendar grid */}
-      {!loading && !error && (
+      {!loading && !error && Object.keys(tasksByDay).length === 0 && (
+        <EmptyState icon={CalendarDays} title='Tidak ada task minggu ini' description='Buat goal atau tambah task untuk memulai.' />
+      )}
+
+      {!loading && !error && Object.keys(tasksByDay).length > 0 && (
         <div className='grid grid-cols-7 gap-2 min-h-[480px]'>
           {DAYS.map(({ label }, dayIndex) => {
             const dateKey  = dateForIndex(weekStart, dayIndex);

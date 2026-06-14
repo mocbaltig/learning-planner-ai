@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-// import { getThisMonday, snapToMonday } from '../utils/dateUtils';
 import GoalCard from '../components/GoalCard.jsx';
+import LoadingState from '../components/ui/LoadingState';
 import {
   Target,
   Plus,
@@ -21,13 +21,16 @@ export default function Goals() {
   const [showExtra, setShowExtra]   = useState(false);
   const [createError, setCreateError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading]       = useState(true);
   const [loadError, setLoadError]     = useState(null);
   const [deleteError, setDeleteError] = useState(null);
   const [deletingId, setDeletingId]   = useState(null);
   const navigate = useNavigate();
 
   function fetchGoals() {
-    api.get('/goals').then(setGoals).catch(err => setLoadError(err.message));
+    setLoading(true);
+    setLoadError(null);
+    api.get('/goals').then(setGoals).catch(err => setLoadError(err.message)).finally(() => setLoading(false));
   }
 
   useEffect(() => { fetchGoals(); }, []);
@@ -220,8 +223,11 @@ export default function Goals() {
         </div>
       )}
 
+      {/* ── Loading ── */}
+      {loading && <LoadingState variant='card' count={2} />}
+
       {/* ── Goals List ── */}
-      {!loadError && !goals.length ? (
+      {!loading && !loadError && !goals.length ? (
         <div className='bg-[#0f172a] border border-dashed border-white/10 rounded-3xl p-12 text-center'>
           <div className='inline-flex items-center justify-center w-14 h-14 bg-indigo-500/10 rounded-2xl mb-4'>
             <Target size={24} className='text-indigo-400' />
@@ -229,7 +235,7 @@ export default function Goals() {
           <h2 className='text-2xl font-semibold mb-3'>Belum Ada Goal</h2>
           <p className='text-gray-400'>Mulailah membuat target belajar pertama Anda.</p>
         </div>
-      ) : !loadError && (
+      ) : !loading && !loadError && (
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
           {goals.map(g => (
             <div

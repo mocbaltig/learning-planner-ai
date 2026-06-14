@@ -144,7 +144,7 @@ export default function Observability() {
           />
           <StatCard
             title='Avg Response Time'
-            value={data ? `${data.avg_response_time.toFixed(0)}ms` : null}
+            value={data ? `${(data.avg_response_time ?? 0).toFixed(0)}ms` : null}
             subtitle='Waktu respons rata-rata'
             loading={loading}
           />
