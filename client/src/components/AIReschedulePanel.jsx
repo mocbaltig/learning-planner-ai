@@ -4,7 +4,6 @@ import {
   Sparkles,
   CheckCircle2,
   XCircle,
-  RotateCcw,
   Clock,
   Sun,
   Sunset,
@@ -15,59 +14,15 @@ import {
 } from 'lucide-react';
 import RationaleBox from './RationaleBox';
 import ConfidenceBadge from './ConfidenceBadge';
+import LoadingState from './ui/LoadingState';
+import ErrorState from './ui/ErrorState';
+import EmptyState from './ui/EmptyState';
 
 const SLOT_META = {
   morning:   { label: 'Pagi',  Icon: Sun,    color: 'text-amber-400',   bg: 'bg-amber-500/10' },
   afternoon: { label: 'Siang', Icon: Sunset, color: 'text-orange-400',  bg: 'bg-orange-500/10' },
   evening:   { label: 'Malam', Icon: Moon,   color: 'text-indigo-400',  bg: 'bg-indigo-500/10' },
  };
-
-function LoadingSkeleton() {
-  return (
-    <div className='space-y-4 animate-pulse' aria-busy='true' aria-label='Memuat saran reschedule' aria-live='polite' role='region'>
-      <div className='h-4 bg-white/5 rounded-full w-3/4' />
-      <div className='h-4 bg-white/5 rounded-full w-1/2' />
-      {[1, 2, 3].map((i) => (
-        <div key={i} className='bg-[#0f172a] border border-white/5 rounded-2xl p-5 space-y-3'>
-          <div className='h-4 bg-white/5 rounded-full w-2/3' />
-          <div className='h-3 bg-white/5 rounded-full w-full' />
-          <div className='h-3 bg-white/5 rounded-full w-4/5' />
-          <div className='flex gap-2 mt-4'>
-            <div className='h-8 w-24 bg-white/5 rounded-xl' />
-            <div className='h-8 w-24 bg-white/5 rounded-xl' />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ErrorState({ message, onRetry }) {
-  return (
-    <div className='bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center space-y-3' role='alert'>
-      <p className='text-red-400 font-medium'>⚠️ {message}</p>
-      <button
-        onClick={onRetry}
-        className='inline-flex items-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 rounded-xl px-4 py-2 text-sm font-medium transition-all'
-      >
-        <RotateCcw size={14} />
-        Coba lagi
-      </button>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className='bg-[#0f172a] border border-dashed border-white/10 rounded-2xl p-8 text-center'>
-      <CalendarCheck className='text-slate-500 mx-auto mb-3' size={32} />
-      <p className='text-slate-300 font-medium'>Tidak ada task yang perlu dijadwalkan ulang</p>
-      <p className='text-slate-500 text-sm mt-1'>
-        Semua task sudah terjadwal dengan baik.
-      </p>
-    </div>
-  );
-}
 
 function DoneSummary({ acceptedCount, totalCount }) {
   return (
@@ -89,6 +44,7 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
   const [taskStates, setTaskStates]     = useState({});
   const [acceptedTasks, setAcceptedTasks] = useState([]);
   const [recommendationId, setRecommendationId] = useState(null);
+  const [acceptError, setAcceptError] = useState(null);
 
   async function fetchReschedule() {
     if (!tasks || tasks.length === 0) return;
@@ -112,6 +68,7 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
   }
 
   async function handleAccept(task, index) {
+    setAcceptError(null);
     setTaskStates((prev) => ({ ...prev, [index]: 'loading' }));
     try {
       const updated = await api.patch(`/tasks/${task.id}`, {
@@ -124,12 +81,12 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
       setAcceptedTasks((prev) => [...prev, updated]);
       onRescheduled?.(updated);
     } catch (err) {
+      setAcceptError(err.message || 'Gagal menyimpan task');
       setTaskStates((prev) => {
         const next = { ...prev };
         delete next[index];
         return next;
       });
-      alert(`Gagal menerima reschedule: ${err.message}`);
     }
   }
 
@@ -164,13 +121,15 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
   }
 
   /* ── Render: LOADING ── */
-  if (loading) return <LoadingSkeleton />;
+  if (loading) return <LoadingState variant='card' count={3} message='Memuat saran reschedule' />;
 
   /* ── Render: ERROR ── */
   if (error) return <ErrorState message={error} onRetry={fetchReschedule} />;
 
   /* ── Render: EMPTY ── */
-  if (suggestions?.tasks?.length === 0) return <EmptyState />;
+  if (suggestions?.tasks?.length === 0) return (
+    <EmptyState icon={CalendarCheck} title='Tidak ada task yang perlu dijadwalkan ulang' description='Semua task sudah terjadwal dengan baik.' />
+  );
 
   /* ── Render: DONE ── */
   if (allProcessed) {
@@ -185,6 +144,11 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
   /* ── Render: SUGGESTIONS ── */
   return (
     <div className='space-y-4' aria-live='polite' role='region'>
+      {acceptError && (
+        <div className='bg-red-500/10 border border-red-500/20 rounded-2xl px-5 py-3' role='alert'>
+          <p className='text-sm text-red-400'>Gagal menyimpan task: {acceptError}</p>
+        </div>
+      )}
       {suggestions.summary && (
         <div className='bg-indigo-500/10 border border-indigo-500/20 rounded-2xl px-5 py-4 flex gap-3'>
           <Sparkles className='text-indigo-400 flex-shrink-0 mt-0.5' size={16} />

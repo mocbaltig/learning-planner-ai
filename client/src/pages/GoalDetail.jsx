@@ -653,7 +653,6 @@ export default function GoalDetail() {
               const slot = SLOT_META[task.planned_slot] || SLOT_META.morning;
               const SlotIcon = slot.Icon;
               const isManual = task.source === 'manual';
-              {/* const isFocused = index === focusedTaskIndex; */}
 
               return (
                 <li
