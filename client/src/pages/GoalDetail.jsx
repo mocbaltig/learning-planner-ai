@@ -373,6 +373,7 @@ export default function GoalDetail() {
   const [showManualForm, setShowManualForm]     = useState(false);
   const [deletingId, setDeletingId]         = useState(null);
   const [reschedulingId, setReschedulingId] = useState(null); // taskId yang sedang di-reschedule
+  const [deleteError, setDeleteError] = useState(null);
   const [focusedTaskIndex, setFocusedTaskIndex] = useState(-1);
   const taskRefs = useRef([]);
 
@@ -417,8 +418,9 @@ export default function GoalDetail() {
     setExpandedTasks(prev => ({ ...prev, [taskId]: !prev[taskId] }));
   }
 
-  useEffect(() => {
+  function fetchGoal() {
     setLoadingGoal(true);
+    setErrorGoal(null);
     api.get(`/goals/${id}`)
       .then(goalData => {
         const tasks = goalData.tasks ?? [];
@@ -428,6 +430,10 @@ export default function GoalDetail() {
       })
       .catch(err => setErrorGoal(err.message))
       .finally(() => setLoadingGoal(false));
+  }
+
+  useEffect(() => {
+    fetchGoal();
   }, [id]);
 
   function handleTaskAccepted(task) {
@@ -440,11 +446,12 @@ export default function GoalDetail() {
   async function handleDeleteTask(taskId) {
     if (!window.confirm('Hapus task ini?')) return;
     setDeletingId(taskId);
+    setDeleteError(null);
     try {
       await api.patch(`/tasks/${taskId}/status`, { status: 'skipped' });
       setAcceptedTasks(prev => prev.filter(t => t.id !== taskId));
-    } catch {
-      /* silent */
+    } catch (err) {
+      setDeleteError(err.message || 'Gagal menghapus task.');
     } finally {
       setDeletingId(null);
     }
@@ -475,12 +482,20 @@ export default function GoalDetail() {
       <div className='min-h-screen bg-[#020617] flex items-center justify-center p-6'>
         <div className='bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center max-w-sm'>
           <p className='text-red-400 font-medium mb-4'>⚠️ {errorGoal}</p>
-          <button
-            onClick={() => navigate('/goals')}
-            className='text-sm text-slate-400 hover:text-white transition-colors underline'
-          >
-            Kembali ke daftar goal
-          </button>
+          <div className='flex gap-3 justify-center'>
+            <button
+              onClick={fetchGoal}
+              className='bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 rounded-xl px-4 py-2 text-sm font-medium transition-all'
+            >
+              Coba lagi
+            </button>
+            <button
+              onClick={() => navigate('/goals')}
+              className='text-sm text-slate-400 hover:text-white transition-colors underline'
+            >
+              Kembali ke daftar goal
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -612,6 +627,13 @@ export default function GoalDetail() {
               onCreated={handleTaskAccepted}
               onCancel={() => setShowManualForm(false)}
             />
+          </div>
+        )}
+
+        {/* Delete error */}
+        {deleteError && (
+          <div className='mb-4 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2 text-sm text-red-400' role='alert'>
+            ⚠️ {deleteError}
           </div>
         )}
 

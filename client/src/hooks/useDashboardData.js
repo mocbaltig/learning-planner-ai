@@ -16,8 +16,11 @@ export function useDashboardData() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [fetchKey, setFetchKey] = useState(0);
 
   const weekStart = getThisMonday();
+
+  function refetch() { setFetchKey(k => k + 1); }
 
   useEffect(() => {
     let cancelled = false;
@@ -48,7 +51,7 @@ export function useDashboardData() {
       });
 
     return () => { cancelled = true; };
-  }, []);
+  }, [fetchKey]);
 
   // ── Derived stats ───────────────────────────────────────────
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
@@ -77,6 +80,7 @@ export function useDashboardData() {
     user,
     loading,
     error,
+    refetch,
     weekStart,
     todayTasks,
     stats: {

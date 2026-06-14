@@ -55,9 +55,12 @@ export default function Progress() {
   const [trend, setTrend] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [retryKey, setRetryKey] = useState(0);
 
-  useEffect(() => {
+  function fetchProgress() {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     const week = toISOWeek(getThisMonday());
 
     Promise.all([
@@ -73,7 +76,9 @@ export default function Progress() {
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, []);
+  }
+
+  useEffect(() => { fetchProgress(); }, [retryKey]);
 
   const rate = snapshot ? Math.round(snapshot.completion_rate * 100) : 0;
   const planned = snapshot ? parseFloat(snapshot.planned_hours) : 0;
@@ -139,8 +144,14 @@ export default function Progress() {
 
       {/* Error state */}
       {error && (
-        <div className='mb-6 bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-red-400 text-sm'>
-          Gagal memuat data: {error.message}
+        <div className='mb-6 bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center' role='alert'>
+          <p className='text-red-400 font-medium mb-3'>Gagal memuat data: {error.message}</p>
+          <button
+            onClick={() => setRetryKey(k => k + 1)}
+            className='bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 rounded-xl px-4 py-2 text-sm font-medium transition-all'
+          >
+            Coba lagi
+          </button>
         </div>
       )}
 

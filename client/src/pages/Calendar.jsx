@@ -24,6 +24,7 @@ function formatDate(dateStr) {
 /* ── Task Detail Drawer ── */
 function TaskDrawer({ task, onClose, onStatusChange }) {
   const [updating, setUpdating]       = useState(false);
+  const [statusError, setStatusError] = useState(null);
   const closeRef = useRef(null);
   const panelRef = useRef(null);
   const slot = SLOT_META[task.planned_slot] ?? SLOT_META.morning;
@@ -58,12 +59,13 @@ function TaskDrawer({ task, onClose, onStatusChange }) {
 
   async function updateStatus(status) {
     setUpdating(true);
+    setStatusError(null);
     try {
       await api.patch(`/tasks/${task.id}/status`, { status });
       onStatusChange?.(task.id, status);
       onClose();
-    } catch {
-      /* silent — biarkan user coba lagi */
+    } catch (err) {
+      setStatusError(err.message || 'Gagal memperbarui status task.');
     } finally {
       setUpdating(false);
     }
@@ -124,6 +126,13 @@ function TaskDrawer({ task, onClose, onStatusChange }) {
               {STATUS_LABEL[task.status] ?? task.status}
             </span>
           </div>
+
+          {/* Status error */}
+          {statusError && (
+            <p className='text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2' role='alert'>
+              ⚠️ {statusError}
+            </p>
+          )}
 
           {/* Actions — hanya untuk todo */}
           {task.status === 'todo' && (

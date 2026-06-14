@@ -21,12 +21,16 @@ export default function Goals() {
   const [showExtra, setShowExtra]   = useState(false);
   const [createError, setCreateError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
+  const [loadError, setLoadError]     = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
+  const [deletingId, setDeletingId]   = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    api.get('/goals').then(setGoals).catch(() => {});
-  }, []);
+  function fetchGoals() {
+    api.get('/goals').then(setGoals).catch(err => setLoadError(err.message));
+  }
+
+  useEffect(() => { fetchGoals(); }, []);
 
   async function handleCreate(e) {
     e.preventDefault();
@@ -58,8 +62,8 @@ export default function Goals() {
     try {
       await api.delete(`/goals/${goalId}`);
       setGoals(prev => prev.filter(g => g.id !== goalId));
-    } catch {
-      /* silent */
+    } catch (err) {
+      setDeleteError(err.message || 'Gagal menghapus goal.');
     } finally {
       setDeletingId(null);
     }
@@ -196,8 +200,28 @@ export default function Goals() {
         </div>
       </div>
 
+      {/* ── Load Error ── */}
+      {loadError && (
+        <div className='mb-6 bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center' role='alert'>
+          <p className='text-red-400 font-medium mb-3'>⚠️ {loadError}</p>
+          <button
+            onClick={fetchGoals}
+            className='bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 rounded-xl px-4 py-2 text-sm font-medium transition-all'
+          >
+            Coba lagi
+          </button>
+        </div>
+      )}
+
+      {/* Delete Error */}
+      {deleteError && (
+        <div className='mb-4 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2 text-sm text-red-400' role='alert'>
+          ⚠️ {deleteError}
+        </div>
+      )}
+
       {/* ── Goals List ── */}
-      {!goals.length ? (
+      {!loadError && !goals.length ? (
         <div className='bg-[#0f172a] border border-dashed border-white/10 rounded-3xl p-12 text-center'>
           <div className='inline-flex items-center justify-center w-14 h-14 bg-indigo-500/10 rounded-2xl mb-4'>
             <Target size={24} className='text-indigo-400' />
@@ -205,7 +229,7 @@ export default function Goals() {
           <h2 className='text-2xl font-semibold mb-3'>Belum Ada Goal</h2>
           <p className='text-gray-400'>Mulailah membuat target belajar pertama Anda.</p>
         </div>
-      ) : (
+      ) : !loadError && (
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
           {goals.map(g => (
             <div

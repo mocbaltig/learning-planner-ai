@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useDashboardData } from '../hooks/useDashboardData';
@@ -87,20 +88,24 @@ export default function Dashboard() {
     weekStart,
     todayTasks,
     stats,
+    refetch,
   } = useDashboardData();
+  const [markDoneError, setMarkDoneError] = useState(null);
 
   async function markDone(id) {
     // Optimistic update — UI responsif tanpa nunggu API
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, status: 'done' } : t))
     );
+    setMarkDoneError(null);
     try {
       await api.patch(`/tasks/${id}/status`, { status: 'done' });
-    } catch {
+    } catch (err) {
       // Rollback jika API gagal
       setTasks((prev) =>
         prev.map((t) => (t.id === id ? { ...t, status: 'todo' } : t))
       );
+      setMarkDoneError(err.message || 'Gagal memperbarui task.');
     }
   }
 
@@ -109,8 +114,14 @@ export default function Dashboard() {
   if (error) {
     return (
       <div className='p-8 text-center text-slate-400'>
-        <p className='text-red-400 font-medium mb-1'>Gagal memuat data</p>
-        <p className='text-sm'>{error.message}</p>
+        <p className='text-red-400 font-medium mb-3'>Gagal memuat data</p>
+        <p className='text-sm mb-4'>{error.message}</p>
+        <button
+          onClick={refetch}
+          className='bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 rounded-xl px-4 py-2 text-sm font-medium transition-all'
+        >
+          Coba lagi
+        </button>
       </div>
     );
   }
@@ -251,6 +262,12 @@ export default function Dashboard() {
               {doneDisplay}/{displayTasks.length} selesai
             </span>
           </div>
+
+          {markDoneError && (
+            <div className='mb-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2 text-sm text-red-400' role='alert'>
+              ⚠️ {markDoneError}
+            </div>
+          )}
 
           {displayTasks.length === 0 ? (
             <div className='text-center py-8 text-slate-500 text-sm'>

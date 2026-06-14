@@ -64,7 +64,14 @@ export default function WeeklyCalendar({ onTaskClick }) {
   const [tasksByDay, setTasksByDay] = useState({});
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState(null);
+  const [retryKey, setRetryKey] = useState(0);
+  const [focusedDayIndex, setFocusedDayIndex] = useState(-1);
+  const dayRefs = useRef([]);
   const today = todayKey();
+
+  useEffect(() => {
+    dayRefs.current = dayRefs.current.slice(0, 7);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,7 +94,7 @@ export default function WeeklyCalendar({ onTaskClick }) {
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [weekStart]);
+  }, [weekStart, retryKey]);
 
   function shiftWeek(offset) {
     const [y, m, d] = weekStart.split('-').map(Number);
@@ -100,13 +107,6 @@ export default function WeeklyCalendar({ onTaskClick }) {
   }
 
   function goToday() { setWeekStart(getThisMonday()); }
-
-  const [focusedDayIndex, setFocusedDayIndex] = useState(-1);
-  const dayRefs = useRef([]);
-
-  useEffect(() => {
-    dayRefs.current = dayRefs.current.slice(0, 7);
-  }, []);
 
   function handleDayKeyDown(e, dayIndex) {
     if (e.target !== e.currentTarget) return;
@@ -185,8 +185,14 @@ export default function WeeklyCalendar({ onTaskClick }) {
       )}
 
       {!loading && error && (
-        <div className='text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-2xl p-4' role='alert'>
-          ⚠️ {error}
+        <div className='bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center' role='alert'>
+          <p className='text-red-400 font-medium mb-3'>⚠️ {error}</p>
+          <button
+            onClick={() => setRetryKey(k => k + 1)}
+            className='bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 rounded-xl px-4 py-2 text-sm font-medium transition-all'
+          >
+            Coba lagi
+          </button>
         </div>
       )}
 
