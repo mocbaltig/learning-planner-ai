@@ -23,6 +23,7 @@ export default function Login() {
         throw new Error(data.error || 'Login Gagal');
       }
       localStorage.setItem('token', data.token);
+      localStorage.setItem('refreshToken', data.refreshToken);
       navigate('/');
     } catch (err) {
       setError(err.message);

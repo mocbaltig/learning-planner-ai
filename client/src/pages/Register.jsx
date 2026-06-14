@@ -30,6 +30,7 @@ export default function Register() {
         throw new Error(data.error || 'Registrasi Gagal');
       }
       localStorage.setItem('token', data.token);
+      localStorage.setItem('refreshToken', data.refreshToken);
       navigate('/');
     } catch (err) {
       setError(err.message);

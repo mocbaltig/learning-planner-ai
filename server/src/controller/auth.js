@@ -65,4 +65,16 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, me, updateProfile };
+const refreshTokenHandler = async (req, res, next) => {
+  const { refreshToken } = req.validated;
+  try {
+    const decoded = jwt.verify(refreshToken, config.jwtRefreshSecret);
+    const token = generateToken(decoded.userId);
+    const newRefreshToken = generateRefreshToken(decoded.userId);
+    res.json({ token, refreshToken: newRefreshToken });
+  } catch {
+    return next(new UnauthorizedError('Refresh token tidak valid'));
+  }
+};
+
+module.exports = { register, login, me, updateProfile, refreshTokenHandler };

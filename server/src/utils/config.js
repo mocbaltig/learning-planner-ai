@@ -2,13 +2,18 @@
 // Lihat modul Setup — sub modul "Tech Stack, Project Structure & Environment".
 require('dotenv').config();
 
-const requiredEnv = ['DATABASE_URL', 'JWT_SECRET', 'GEMINI_API_KEY'];
+const requiredEnv = ['DATABASE_URL', 'JWT_SECRET', 'JWT_REFRESH_SECRET', 'GEMINI_API_KEY'];
 
 for (const key of requiredEnv) {
   if (!process.env[key]) {
     console.error(`❌ Missing required env: ${key}`);
     process.exit(1);
   }
+}
+
+if (process.env.JWT_REFRESH_SECRET === process.env.JWT_SECRET) {
+  console.error('❌ JWT_REFRESH_SECRET must differ from JWT_SECRET');
+  process.exit(1);
 }
 
 module.exports = {

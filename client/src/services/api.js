@@ -10,8 +10,28 @@ async function request(path, options = {}) {
       ...options.headers,
     },
   });
-  if (res.status === 401) {
+
+  if (res.status === 401 && !options._retry) {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (refreshToken) {
+      try {
+        const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('refreshToken', data.refreshToken);
+          return request(path, { ...options, _retry: true });
+        }
+      } catch {
+        // refresh failed — fall through to redirect
+      }
+    }
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     window.location.href = '/login';
   }
 
