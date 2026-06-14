@@ -160,14 +160,14 @@ export default function WeeklyCalendar({ onTaskClick }) {
         (() => {
           const allWeekEmpty = Object.values(tasksByDay).every(d => d.length === 0) ||
             Object.keys(tasksByDay).length === 0;
-          if (allWeekEmpty) {
-            return (
-              <EmptyState
-                type='calendar'
-                onAction={null}
-              />
-            );
-          }
+          // if (allWeekEmpty) {
+          //   return (
+          //     <EmptyState
+          //       type='calendar'
+          //       onAction={null}
+          //     />
+          //   );
+          // }
           return (
             <div className='grid grid-cols-7 gap-2 min-h-[480px]'>
           {DAYS.map(({ label }, dayIndex) => {
