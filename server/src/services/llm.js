@@ -1,5 +1,8 @@
 require('dotenv').config();
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const {
+  GoogleGenerativeAI,
+  GoogleGenerativeAIFetchError,
+} = require('@google/generative-ai');
 const fs = require('fs');
 const path = require('path');
 const config = require('../utils/config');
@@ -7,6 +10,7 @@ const logger = require('../utils/logger');
 const Profiles = require('../models/profiles');
 const { aiSuggestionPayloadSchema } = require('../validator/ai-schema');
 const { aiRequestCount } = require('../utils/metrics');
+const { ServiceUnavailableError } = require('../exceptions');
 
 function sanitizeContext(context) {
   const sanitized = JSON.parse(JSON.stringify(context));
@@ -76,7 +80,15 @@ async function callLLMReal(type, context, userId) {
       error_message: err.message,
       duration_ms: Date.now() - start,
     });
-    throw err; // NOTE: wait what happen then? does it throw 500?
+
+    if (
+      err instanceof GoogleGenerativeAIFetchError &&
+      (err.status === 429 || err.status === 503)
+    ) {
+      throw new ServiceUnavailableError('Model AI sedang sibuk, silakan coba lagi');
+    }
+
+    throw err;
   }
 }
 
