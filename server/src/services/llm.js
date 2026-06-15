@@ -81,6 +81,25 @@ async function callLLMReal(type, context, userId) {
 }
 
 async function callLLMMock(type, context, userId) {
+    if (type === 'reschedule') {
+    return {
+      text: JSON.stringify({
+        tasks: context.overdue_tasks.map((task) => ({
+          id: task.id,
+          title: task.title,
+          duration_estimate: task.duration_estimate,
+          planned_date: '2026-06-20',
+          planned_slot: 'morning',
+          rationale: [
+            'Task dipindahkan karena overdue',
+            'Slot pagi masih tersedia',
+          ],
+        })),
+        summary: 'Task berhasil dijadwalkan ulang',
+      }),
+      tokenCount: 0,
+    };
+  }
   return {
     text: JSON.stringify({
       tasks: [
@@ -91,8 +110,11 @@ async function callLLMMock(type, context, userId) {
           duration_estimate: 45,
           planned_date: '2026-05-18',
           planned_slot: 'morning',
-          rationale:
-            'Slot pagi tersedia, durasi 45 menit sesuai preferensi sesi pendek, hooks adalah fondasi untuk komponen selanjutnya',
+          rationale: [
+            'Slot pagi tersedia',
+            'Durasi 45 menit sesuai preferensi sesi pendek',
+            'Hooks adalah fondasi untuk materi selanjutnya',
+          ],
         },
       ],
       summary: 'Rencana minggu ini fokus pada fondasi React hooks',

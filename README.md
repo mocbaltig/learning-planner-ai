@@ -38,6 +38,17 @@ cd client && npm install && npm run dev
 - "role user does not exist" — PostgreSQL lokal konflik. Ubah port di docker-compose.yml dan .env ke 5433.
 - "address already in use" — `kill $(lsof -ti :3000)` atau `docker compose down`.
 
+## MVP Features
+
+* Weekly Calendar untuk melihat jadwal belajar mingguan.
+* Manual Task Creation untuk menambahkan tugas belajar secara manual.
+* AI Learning Coach untuk menghasilkan rekomendasi task belajar berdasarkan goal pengguna.
+* AI Task Rescheduling untuk menjadwalkan ulang overdue task menggunakan AI.
+* Task Status Management (Todo → In Progress → Done).
+* Weekly Progress Tracking untuk memantau progres belajar.
+* Admin Dashboard untuk memonitor AI metrics seperti request count, response time, dan acceptance rate.
+
+
 ## Dokumentasi
 
 - [Problem Framing](docs/problem-framing.md)

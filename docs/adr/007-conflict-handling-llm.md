@@ -22,34 +22,53 @@ Faktor yang mempengaruhi keputusan:
 
 ## Keputusan
 
-LLM bertanggung jawab penuh menghindari konflik slot sejak percobaan pertama. Server hanya memberikan informasi yang cukup:
+Menggunakan kombinasi **LLM guidance** dan **server-side post-validation dengan retry** untuk menangani konflik slot pada proses reschedule.
 
-- **`current_week_tasks`** — daftar task existing di minggu ini (termasuk slot dan durasi)
-- **`occupied_slots`** — daftar slot `"YYYY-MM-DD morning|afternoon|evening"` yang sudah terisi
-- **`conflict_warning`** — instruksi eksplisit dalam Bahasa Indonesia untuk menghindari slot tersebut
+Proses yang dilakukan:
 
-Server **tidak** melakukan post-validation konflik slot. Jika AI menghasilkan output dengan konflik, output tersebut tetap dikembalikan ke klien. Klien dapat menggunakan `PATCH /api/tasks/:id` untuk menyesuaikan jadwal secara manual.
+1. Server mengirimkan `current_week_tasks` kepada LLM sebagai konteks awal.
+2. LLM menghasilkan rekomendasi jadwal baru untuk task yang overdue.
+3. Server melakukan validasi konflik slot menggunakan fungsi `findConflicts`.
+4. Jika ditemukan konflik, server melakukan retry dengan menambahkan:
+
+   * `occupied_slots`
+   * `conflict_warning`
+5. Retry dilakukan maksimal **2 kali**.
+6. Jika seluruh percobaan gagal menghasilkan jadwal yang valid, endpoint mengembalikan respons **422 Unprocessable Entity**.
+7. Output AI tetap divalidasi menggunakan Zod schema (`aiRescheduleOutputSchema`) sebelum dikembalikan ke klien.
 
 ## Alasan
 
 1. **LLM capable mengikuti instruksi**: Gemini 2.5 Flash terbukti mampu mengikuti instruksi eksplisit. Dengan `occupied_slots` + `conflict_warning`, kasus konflik dapat diminimalkan tanpa overhead retry.
 
-2. **Eliminasi latency retry**: Setiap retry menambah waktu respons sebesar 1× panggilan API (rata-rata 2-5 detik). Dengan menghilangkan post-validation, endpoint `reschedule` konsisten 1 panggilan API saja.
+2. **Meningkatkan keandalan hasil reschedule**
 
-3. **Server-side validation tidak menambah jaminan**: Post-validation hanya bisa mendeteksi konflik lalu meminta AI memperbaiki — tetap bergantung pada kemampuan AI di panggilan berikutnya. Tidak ada enforcement di level database (tidak ada unique constraint `(planned_date, planned_slot)`), sehingga server tidak bisa memaksa.
+LLM dapat menghasilkan slot yang bertabrakan dengan task lain. Validasi di sisi server membantu mendeteksi konflik sebelum rekomendasi dikembalikan ke pengguna.
 
-4. **User tetap punya kontrol manual**: Endpoint `PATCH /api/tasks/:id` sudah tersedia untuk user memperbaiki jadwal jika AI tetap menghasilkan konflik.
+3. **Retry meningkatkan peluang mendapatkan jadwal yang valid**
 
-5. **Kesederhanaan kode**: Tanpa post-validation, logika `reschedule` tetap linear: build context → call LLM → validate → save → respond. Tidak perlu loop retry atau deteksi konflik di controller.
+Dengan memberikan `occupied_slots` dan `conflict_warning`, LLM memperoleh informasi tambahan untuk menghindari konflik pada percobaan berikutnya.
+
+4. **Schema validation menjaga konsistensi output AI**
+
+Seluruh respons AI harus memenuhi `aiRescheduleOutputSchema` untuk memastikan data yang dikembalikan sesuai dengan kebutuhan aplikasi.
+
+5. **Pengguna tetap memiliki kontrol manual**
+
+Jika seluruh percobaan gagal, pengguna tetap dapat menjadwalkan ulang task secara manual melalui fitur edit task.
+
 
 ## Konsekuensi
 
 **Positif:**
-- Respons endpoint lebih cepat dan konsisten (1 panggilan API, tanpa retry)
-- Kode controller lebih sederhana dan mudah dipahami
-- Tidak ada false positive — server tidak pernah menolak output AI hanya karena konflik slot
+- Mengurangi kemungkinan konflik slot pada hasil reschedule.
+- Meningkatkan reliabilitas output AI melalui validasi dan retry.
+- Menjaga konsistensi format data dengan schema validation.
 
 **Negatif / Risiko:**
+- Waktu respons endpoint dapat meningkat akibat mekanisme retry.
+- Menambah kompleksitas logika pada controller.
+- Tetap bergantung pada kualitas respons AI untuk menghasilkan rekomendasi yang valid.
 - **Konflik slot masih mungkin terjadi**: Meskipun kecil, AI tetap bisa mengabaikan instruksi. User harus memperbaiki manual via `PATCH /api/tasks/:id`
 - **Tidak ada audit trail konflik**: Server tidak mencatat ketika AI menghasilkan konflik, sehingga sulit mengukur kualitas prompt
 - **Beban ke UX**: Frontend perlu menangani kemungkinan conflicting tasks, misalnya dengan menampilkan warning atau deteksi konflik di sisi klien

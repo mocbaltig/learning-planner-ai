@@ -52,27 +52,42 @@ const createSuggestion = async (req, res, next) => {
       context,
       req.user.id,
     );
-    finalOutput = validateAIOutput(raw);
-    if (!finalOutput) {
-      // retry 1x
-      const { text: retryRaw, tokenCount: retryTokens } = await callLLM(
-        'suggest',
-        context,
-        req.user.id,
-      );
-      finalOutput = validateAIOutput(retryRaw);
-      tokenCount = retryTokens;
-      if (!finalOutput) {
-        logger.warn({ request_id: req.requestId, action: 'ai_suggest_failed' });
-        return next(
-          new UnprocessableEntityError(
-            'AI tidak dapat memberikan saran yang valid. Coba lagi nanti.',
-          ),
-        );
-      }
-    } else {
-      tokenCount = firstTokens;
-    }
+    console.log("===== RAW AI OUTPUT =====");
+console.log(raw);
+console.log("=========================");
+
+finalOutput = validateAIOutput(raw);
+
+if (!finalOutput) {
+  // retry 1x
+  const { text: retryRaw, tokenCount: retryTokens } = await callLLM(
+    'suggest',
+    context,
+    req.user.id,
+  );
+
+  console.log("===== RETRY AI OUTPUT =====");
+  console.log(retryRaw);
+  console.log("===========================");
+
+  finalOutput = validateAIOutput(retryRaw);
+  tokenCount = retryTokens;
+
+  if (!finalOutput) {
+    logger.warn({
+      request_id: req.requestId,
+      action: 'ai_suggest_failed',
+    });
+
+    return next(
+      new UnprocessableEntityError(
+        'AI tidak dapat memberikan saran yang valid. Coba lagi nanti.',
+      ),
+    );
+  }
+} else {
+  tokenCount = firstTokens;
+}
 
     await AIRecommendations.create({
       user_id: req.user.id,
@@ -138,6 +153,8 @@ const reschedule = async (req, res, next) => {
     }
 
     const overdueTasks = await Tasks.findOverdueTasksByIds(req.user.id, task_ids);
+    console.log("OVERDUE TASKS:", overdueTasks);
+    console.log("TASK IDS:", task_ids);
     const weekStart = getCurrentWeekStart();
     const weekTasks = await Tasks.findTasksByWeek(req.user.id, weekStart);
     const todoWeekTasks = weekTasks.filter((t) => t.status === 'todo');
@@ -195,6 +212,11 @@ const reschedule = async (req, res, next) => {
         usedContext,
         req.user.id,
       );
+
+      console.log(`===== RAW RESCHEDULE OUTPUT (Attempt ${attempt + 1}) =====`);
+      console.log(raw);
+      console.log("================================================");
+
       validated = validateAIOutput(raw, aiRescheduleOutputSchema);
       if (!validated) continue;
 
