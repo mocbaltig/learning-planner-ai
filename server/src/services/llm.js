@@ -11,6 +11,7 @@ const Profiles = require('../models/profiles');
 const { aiSuggestionPayloadSchema } = require('../validator/ai-schema');
 const { aiRequestCount } = require('../utils/metrics');
 const { ServiceUnavailableError } = require('../exceptions');
+const breaker = require('./circuit-breaker');
 
 function sanitizeContext(context) {
   const sanitized = JSON.parse(JSON.stringify(context));
@@ -42,54 +43,56 @@ const genAI = new GoogleGenerativeAI(config.geminiKey);
 const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
 async function callLLMReal(type, context, userId) {
-  const sanitizedContext = sanitizeContext(context);
-  const systemPrompt = loadSystemPrompt();
-  const userPrompt = `Type: ${type}\nContext: ${JSON.stringify(sanitizedContext)}`;
+  return breaker.execute(async () => {
+    const sanitizedContext = sanitizeContext(context);
+    const systemPrompt = loadSystemPrompt();
+    const userPrompt = `Type: ${type}\nContext: ${JSON.stringify(sanitizedContext)}`;
 
-  const start = Date.now();
+    const start = Date.now();
 
-  try {
-    const result = await model.generateContent([systemPrompt, userPrompt]);
-    const durationMs = Date.now() - start;
-    const text = result.response.text();
+    try {
+      const result = await model.generateContent([systemPrompt, userPrompt]);
+      const durationMs = Date.now() - start;
+      const text = result.response.text();
 
-    const tokenCount = result.response.usageMetadata?.totalTokenCount || 0;
-    if (userId && tokenCount > 0) {
-      await Profiles.incrementTokenCount(userId, tokenCount);
+      const tokenCount = result.response.usageMetadata?.totalTokenCount || 0;
+      if (userId && tokenCount > 0) {
+        await Profiles.incrementTokenCount(userId, tokenCount);
+      }
+
+      const tokenUsage = {
+        input_tokens: result.response.usageMetadata?.promptTokenCount || 0,
+        output_tokens: result.response.usageMetadata?.candidatesTokenCount || 0,
+      };
+
+      aiRequestCount.inc({ type, status: 'success' });
+      logger.info({
+        action: 'llm_call',
+        type,
+        duration_ms: durationMs,
+        ...tokenUsage,
+      });
+
+      return { text, tokenCount };
+    } catch (err) {
+      aiRequestCount.inc({ type, status: 'error' });
+      logger.error({
+        action: 'llm_call_error',
+        type,
+        error_message: err.message,
+        duration_ms: Date.now() - start,
+      });
+
+      if (
+        err instanceof GoogleGenerativeAIFetchError &&
+        (err.status === 429 || err.status === 503)
+      ) {
+        throw new ServiceUnavailableError('Model AI sedang sibuk, silakan coba lagi');
+      }
+
+      throw err;
     }
-
-    const tokenUsage = {
-      input_tokens: result.response.usageMetadata?.promptTokenCount || 0,
-      output_tokens: result.response.usageMetadata?.candidatesTokenCount || 0,
-    };
-
-    aiRequestCount.inc({ type, status: 'success' });
-    logger.info({
-      action: 'llm_call',
-      type,
-      duration_ms: durationMs,
-      ...tokenUsage,
-    });
-
-    return { text, tokenCount };
-  } catch (err) {
-    aiRequestCount.inc({ type, status: 'error' });
-    logger.error({
-      action: 'llm_call_error',
-      type,
-      error_message: err.message,
-      duration_ms: Date.now() - start,
-    });
-
-    if (
-      err instanceof GoogleGenerativeAIFetchError &&
-      (err.status === 429 || err.status === 503)
-    ) {
-      throw new ServiceUnavailableError('Model AI sedang sibuk, silakan coba lagi');
-    }
-
-    throw err;
-  }
+  });
 }
 
 async function callLLMMock(type, context, userId) {
