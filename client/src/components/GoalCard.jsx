@@ -21,7 +21,7 @@ export default function GoalCard({ id, title, deadline, taskTotal }) {
         {deadline && (
           <span className='inline-flex items-center gap-1 text-slate-400 bg-white/5 rounded-full px-2.5 py-1'>
             <CalendarDays size={10} />
-            {deadline}
+            {new Date(deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
           </span>
         )}
         {taskTotal !== undefined && (
