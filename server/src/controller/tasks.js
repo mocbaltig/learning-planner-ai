@@ -2,7 +2,8 @@ const logger = require('../utils/logger');
 const Tasks = require('../models/tasks');
 const ProgressSnapshots = require('../models/progress_snapshots');
 const { InvariantError, NotFoundError, ClientError } = require('../exceptions');
-const { getWeekEnd } = require('../utils/week');
+const appEvents = require('../services/events');
+const { getWeekEnd, getCurrentWeek } = require('../utils/week');
 
 const createTask = async (req, res, next) => {
   try {
@@ -52,16 +53,22 @@ const getTasksByWeekStart = async (req, res, next) => {
 
     // Mode 3: filter per minggu + per goal (dipakai GoalDetail dengan week_start)
     if (goalId) {
-      const goalTasks = await Tasks.findByGoalAndWeek(goalId, req.user.id, weekStart, weekEnd);
+      const goalTasks = await Tasks.findByGoalAndWeek(
+        goalId,
+        req.user.id,
+        weekStart,
+        weekEnd,
+      );
       return res.json(goalTasks);
     }
 
     // Kalau tidak ada goalId: kembalikan grouped by day (format Calendar/Dashboard)
     const grouped = {};
     for (const task of tasks) {
-      const day = task.planned_date instanceof Date
-        ? task.planned_date.toISOString().split('T')[0]
-        : String(task.planned_date).split('T')[0];
+      const day =
+        task.planned_date instanceof Date
+          ? task.planned_date.toISOString().split('T')[0]
+          : String(task.planned_date).split('T')[0];
       if (!grouped[day]) grouped[day] = [];
       grouped[day].push(task);
     }
@@ -106,6 +113,25 @@ const editStatus = async (req, res, next) => {
     // Recalculate progress snapshot
     if (task.planned_date) {
       await ProgressSnapshots.recalculateProgress(req.user.id, task.planned_date);
+    }
+
+    if (status === 'done') {
+      appEvents.emit('task:completed', { userId: req.user.id, taskId: task.id });
+      // Cek apakah semua tugas minggu ini selesai
+      const weekProgress = await ProgressSnapshots.getProgress(
+        req.user.id,
+        getCurrentWeek(),
+      );
+
+      if (
+        weekProgress.rows[0] &&
+        parseFloat(weekProgress.rows[0].completion_rate) >= 1.0
+      ) {
+        appEvents.emit('milestone:reached', {
+          userId: req.user.id,
+          milestone: `week_${getCurrentWeek()}_complete`,
+        });
+      }
     }
 
     logger.info({
