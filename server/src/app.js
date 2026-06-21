@@ -12,6 +12,7 @@ const goalRoutes = require('./routes/goals');
 const aiRoutes = require('./routes/ai');
 const taskRoutes = require('./routes/tasks');
 const progressRoutes = require('./routes/progress');
+const exportRoutes = require('./routes/export');
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use('/api/goals', goalRoutes);
 app.use('/api/ai', aiLimiter, aiRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/progress', progressRoutes);
+app.use('/api/export', exportRoutes);
 
 app.use(errorHandler);
 
