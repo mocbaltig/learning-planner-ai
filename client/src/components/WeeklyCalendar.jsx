@@ -67,6 +67,7 @@ export default function WeeklyCalendar({ onTaskClick }) {
   const [error, setError]           = useState(null);
   const [retryKey, setRetryKey] = useState(0);
   const [focusedDayIndex, setFocusedDayIndex] = useState(-1);
+  const [exporting, setExporting] = useState(false);
   const dayRefs = useRef([]);
   const today = todayKey();
 
@@ -108,6 +109,17 @@ export default function WeeklyCalendar({ onTaskClick }) {
   }
 
   function goToday() { setWeekStart(getThisMonday()); }
+
+  async function handleExportICS() {
+    setExporting(true);
+    try {
+      await api.download(`/export/weekly/ics?week_start=${weekStart}`, `jadwal-${weekStart}.ics`);
+    } catch {
+      // api.download handles errors
+    } finally {
+      setExporting(false);
+    }
+  }
 
   function handleDayKeyDown(e, dayIndex) {
     if (e.target !== e.currentTarget) return;
@@ -168,12 +180,21 @@ export default function WeeklyCalendar({ onTaskClick }) {
           <h2 className='text-base font-semibold text-white ml-1 capitalize'>{weekLabel}</h2>
         </div>
 
-        <button
-          onClick={goToday}
-          className='text-xs px-3 py-1.5 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 transition-all'
-        >
-          Minggu ini
-        </button>
+        <div className='flex items-center gap-2'>
+          <button
+            onClick={handleExportICS}
+            disabled={exporting}
+            className='text-xs px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 transition-all disabled:opacity-50'
+          >
+            {exporting ? 'Mengexport...' : 'Export ICS'}
+          </button>
+          <button
+            onClick={goToday}
+            className='text-xs px-3 py-1.5 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 transition-all'
+          >
+            Minggu ini
+          </button>
+        </div>
       </div>
 
       {/* Loading / Error */}
