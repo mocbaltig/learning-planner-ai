@@ -13,44 +13,56 @@ function generateRefreshToken(userId) {
 }
 
 const register = async (req, res, next) => {
-  const { email, password } = req.validated;
-  const existing = await Users.emailExist(email);
-  if (existing) {
-    return next(new ConflictError('Email sudah terdaftar'));
+  try {
+    const { email, password } = req.validated;
+    const existing = await Users.emailExist(email);
+    if (existing) {
+      return next(new ConflictError('Email sudah terdaftar'));
+    }
+    const userResult = await Users.create({ email, password });
+    const userId = userResult.id;
+
+    await Profiles.init(userId);
+
+    const token = generateToken(userId);
+    const refreshToken = generateRefreshToken(userId);
+
+    res.status(201).json({ token, refreshToken, userId });
+  } catch (err) {
+    next(err);
   }
-  const userResult = await Users.create({ email, password });
-  const userId = userResult.id;
-
-  await Profiles.init(userId);
-
-  const token = generateToken(userId);
-  const refreshToken = generateRefreshToken(userId);
-
-  res.status(201).json({ token, refreshToken, userId });
 };
 
 const login = async (req, res, next) => {
-  const { email, password } = req.validated;
+  try {
+    const { email, password } = req.validated;
 
-  const userId = await Users.verify(email, password);
+    const userId = await Users.verify(email, password);
 
-  if (!userId) {
-    return next(new UnauthorizedError('Email atau password salah'));
+    if (!userId) {
+      return next(new UnauthorizedError('Email atau password salah'));
+    }
+
+    const token = generateToken(userId);
+    const refreshToken = generateRefreshToken(userId);
+    res.json({ token, refreshToken, userId });
+  } catch (err) {
+    next(err);
   }
-
-  const token = generateToken(userId);
-  const refreshToken = generateRefreshToken(userId);
-  res.json({ token, refreshToken, userId });
 };
 
 const me = async (req, res, next) => {
-  const profile = await Profiles.findByUserId(req.user.id);
+  try {
+    const profile = await Profiles.findByUserId(req.user.id);
 
-  if (!profile) {
-    return next(new NotFoundError('User tidak ditemukan'));
+    if (!profile) {
+      return next(new NotFoundError('User tidak ditemukan'));
+    }
+
+    res.json(profile);
+  } catch (err) {
+    next(err);
   }
-
-  res.json(profile);
 };
 
 const updateProfile = async (req, res, next) => {

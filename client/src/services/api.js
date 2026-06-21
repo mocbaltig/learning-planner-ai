@@ -35,7 +35,16 @@ async function request(path, options = {}) {
     window.location.href = '/login';
   }
 
-  if (!res.ok) throw new Error((await res.json()).error || 'Request gagal');
+  if (!res.ok) {
+    let message;
+    try {
+      const body = await res.json();
+      message = body.error;
+    } catch {
+      message = res.statusText;
+    }
+    throw new Error(message || 'Request gagal');
+  }
   if (res.status === 204) return null;
   return res.json();
 }
