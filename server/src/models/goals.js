@@ -12,10 +12,12 @@ class Goals {
   async getAll(userId) {
     const result = await db.query(
       `SELECT g.*,
-         (SELECT COUNT(*) FROM tasks t WHERE t.goal_id = g.id)::int AS task_total,
-         (SELECT COUNT(*) FROM tasks t WHERE t.goal_id = g.id AND t.status = 'done')::int AS task_done_count
+         COALESCE(COUNT(t.id)::int, 0) AS task_total,
+         COALESCE(COUNT(t.id) FILTER (WHERE t.status = 'done')::int, 0) AS task_done_count
        FROM goals g
+       LEFT JOIN tasks t ON t.goal_id = g.id
        WHERE g.user_id = $1
+       GROUP BY g.id
        ORDER BY g.created_at DESC`,
       [userId],
     );
