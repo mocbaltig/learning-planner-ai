@@ -1,0 +1,9 @@
+node_modules
+.git
+coverage
+tests
+*.log
+.eslintrc.json
+eslint.config.mjs
+.env
+.env.example

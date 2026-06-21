@@ -11,7 +11,6 @@
 | Frontend   | React 19, Vite 6, Tailwind CSS 4, React Router v7 |
 | Backend    | Express.js 4, node-pg-migrate                     |
 | Database   | PostgreSQL 16                                     |
-| Cache      | Redis 7                                           |
 | AI         | Google Gemini API                                 |
 | Monitoring | Prometheus metrics (`prom-client`), Pino logging  |
 | Auth       | JWT (access + refresh token)                      |
@@ -72,6 +71,37 @@ npm run dev
 | Backend API        | <http://localhost:3000>         |
 | Health Check       | <http://localhost:3000/health>  |
 | Prometheus Metrics | <http://localhost:3000/metrics> |
+
+---
+
+## Production Deployment
+
+Jalankan seluruh aplikasi dalam container:
+
+```bash
+# 1. Setup environment production
+cp server/.env.example server/.env.production
+# Edit server/.env.production — isi GEMINI_API_KEY, ubah JWT_SECRET/JWT_REFRESH_SECRET
+# Pastikan DATABASE_URL = postgres://user:pass@db:5432/planner
+
+# 2. Build & jalankan
+docker compose -f docker-compose.production.yml up --build
+```
+
+| Layanan     | URL                     |
+| ----------- | ----------------------- |
+| Frontend    | <http://localhost:80>   |
+| Backend API | <http://localhost:3000> |
+
+### Perbedaan dengan development
+
+| Aspek            | Development (`docker-compose.yml`) | Production (`docker-compose.production.yml`) |
+| ---------------- | ---------------------------------- | -------------------------------------------- |
+| Server image     | `Dockerfile` (nodemon)             | `Dockerfile.production` (multi-stage)        |
+| Client image     | `Dockerfile` (Vite dev server)     | `Dockerfile.production` (build + nginx)      |
+| Client port      | `5173`                             | `80`                                         |
+| Volume mounts    | Ya (hot reload)                    | Tidak (self-contained)                       |
+| Migrasi otomatis | Manual                             | Ya (via entrypoint)                          |
 
 ---
 
@@ -158,58 +188,58 @@ Dengan mode ini, endpoint AI akan mengembalikan data palsu tanpa memanggil Gemin
 
 ### Sistem
 
-| Method | Endpoint               | Akses      | Deskripsi                      |
-| ------ | ---------------------- | ---------- | ------------------------------ |
-| `GET` | `/health` | Publik | Health check server |
-| `GET` | `/metrics` | Publik | Metrik Prometheus (raw format) |
-| `GET` | `/api/metrics/summary` | Admin | Ringkasan metrik JSON |
+| Method | Endpoint               | Akses  | Deskripsi                      |
+| ------ | ---------------------- | ------ | ------------------------------ |
+| `GET`  | `/health`              | Publik | Health check server            |
+| `GET`  | `/metrics`             | Publik | Metrik Prometheus (raw format) |
+| `GET`  | `/api/metrics/summary` | Admin  | Ringkasan metrik JSON          |
 
 ### Autentikasi
 
-| Method  | Endpoint             | Akses     | Deskripsi                           |
-| ------- | -------------------- | --------- | ----------------------------------- |
-| `POST` | `/api/auth/register` | Publik | Daftar akun baru (rate: 5/menit) |
-| `POST` | `/api/auth/login` | Publik | Login (rate: 5/menit) |
-| `POST` | `/api/auth/refresh` | Publik | Perbarui token dengan refresh token |
-| `GET` | `/api/auth/me` | Login | Lihat profil dan data pengguna |
-| `PATCH` | `/api/auth/me` | Login | Ubah profil pengguna |
+| Method  | Endpoint             | Akses  | Deskripsi                           |
+| ------- | -------------------- | ------ | ----------------------------------- |
+| `POST`  | `/api/auth/register` | Publik | Daftar akun baru (rate: 5/menit)    |
+| `POST`  | `/api/auth/login`    | Publik | Login (rate: 5/menit)               |
+| `POST`  | `/api/auth/refresh`  | Publik | Perbarui token dengan refresh token |
+| `GET`   | `/api/auth/me`       | Login  | Lihat profil dan data pengguna      |
+| `PATCH` | `/api/auth/me`       | Login  | Ubah profil pengguna                |
 
 ### Goals
 
-| Method   | Endpoint         | Akses    | Deskripsi         |
-| -------- | ---------------- | -------- | ----------------- |
-| `POST` | `/api/goals` | Login | Buat goal baru |
-| `GET` | `/api/goals` | Login | Lihat semua goal |
-| `GET` | `/api/goals/:id` | Login | Lihat detail goal |
-| `PATCH` | `/api/goals/:id` | Login | Ubah goal |
-| `DELETE` | `/api/goals/:id` | Login | Hapus goal |
+| Method   | Endpoint         | Akses | Deskripsi         |
+| -------- | ---------------- | ----- | ----------------- |
+| `POST`   | `/api/goals`     | Login | Buat goal baru    |
+| `GET`    | `/api/goals`     | Login | Lihat semua goal  |
+| `GET`    | `/api/goals/:id` | Login | Lihat detail goal |
+| `PATCH`  | `/api/goals/:id` | Login | Ubah goal         |
+| `DELETE` | `/api/goals/:id` | Login | Hapus goal        |
 
 ### Tasks
 
-| Method  | Endpoint                | Akses    | Deskripsi                                   |
-| ------- | ----------------------- | -------- | ------------------------------------------- |
-| `POST` | `/api/tasks` | Login | Buat task baru |
-| `GET` | `/api/tasks` | Login | Lihat task (query: `?week_start=&goal_id=`) |
-| `PATCH` | `/api/tasks/:id/status` | Login | Ubah status task (`todo` / `done`) |
-| `PATCH` | `/api/tasks/:id` | Login | Ubah detail task |
+| Method  | Endpoint                | Akses | Deskripsi                                   |
+| ------- | ----------------------- | ----- | ------------------------------------------- |
+| `POST`  | `/api/tasks`            | Login | Buat task baru                              |
+| `GET`   | `/api/tasks`            | Login | Lihat task (query: `?week_start=&goal_id=`) |
+| `PATCH` | `/api/tasks/:id/status` | Login | Ubah status task (`todo` / `done`)          |
+| `PATCH` | `/api/tasks/:id`        | Login | Ubah detail task                            |
 
 ### AI Learning Coach
 
 > Semua endpoint AI di bawah rate limiter terpisah: **20 request/menit**
 
-| Method  | Endpoint                      | Akses    | Deskripsi                                            |
-| ------- | ----------------------------- | -------- | ---------------------------------------------------- |
-| `POST` | `/api/ai/plan/suggest` | Login | AI menyarankan rencana belajar mingguan |
-| `POST` | `/api/ai/plan/reschedule` | Login | AI menjadwalkan ulang task yang terlewat |
+| Method  | Endpoint                      | Akses | Deskripsi                                            |
+| ------- | ----------------------------- | ----- | ---------------------------------------------------- |
+| `POST`  | `/api/ai/plan/suggest`        | Login | AI menyarankan rencana belajar mingguan              |
+| `POST`  | `/api/ai/plan/reschedule`     | Login | AI menjadwalkan ulang task yang terlewat             |
 | `PATCH` | `/api/ai/recommendations/:id` | Login | Ubah status rekomendasi AI (`accepted` / `rejected`) |
-| `GET` | `/api/ai/token-usage` | Login | Lihat pemakaian token AI per batch |
+| `GET`   | `/api/ai/token-usage`         | Login | Lihat pemakaian token AI per batch                   |
 
 ### Progress
 
-| Method | Endpoint               | Akses    | Deskripsi                                   |
-| ------ | ---------------------- | -------- | ------------------------------------------- |
-| `GET` | `/api/progress/weekly` | Login | Progress mingguan (query: `?week=YYYY-Www`) |
-| `GET` | `/api/progress/trend` | Login | Tren progress |
+| Method | Endpoint               | Akses | Deskripsi                                   |
+| ------ | ---------------------- | ----- | ------------------------------------------- |
+| `GET`  | `/api/progress/weekly` | Login | Progress mingguan (query: `?week=YYYY-Www`) |
+| `GET`  | `/api/progress/trend`  | Login | Tren progress                               |
 
 ---
 
@@ -271,6 +301,7 @@ Error khusus ditangani oleh `errorHandler` middleware:
 | "Cannot connect to Docker daemon" | Buka Docker Desktop, tunggu sampai statusnya running                                  |
 | "role user does not exist"        | PostgreSQL lokal konflik port. Ubah port di `docker-compose.yml` dan `.env` ke `5433` |
 | "address already in use"          | `kill $(lsof -ti :3000)` atau `docker compose down`                                   |
+| Client muncul di port 5173 (Vite) | Jalankan dengan `docker compose -f docker-compose.production.yml up --build`          |
 | Migrasi gagal                     | `npm run migrate:down` lalu `npm run migrate:up` ulang                                |
 | Seed gagal                        | Pastikan migrasi sudah jalan dan database bisa diakses                                |
 
