@@ -22,7 +22,7 @@ class Profiles {
 
   async updateByUserId(
     userId,
-    { timezone, preferredTime, weeklyTargetHours, availability },
+    { timezone, preferred_time, weekly_target_hours, availability },
   ) {
     const result = await db.query(
       `UPDATE profiles SET
@@ -31,7 +31,7 @@ class Profiles {
         weekly_target_hours = COALESCE($3, weekly_target_hours),
         availability = COALESCE($4, availability)
         WHERE user_id = $5 RETURNING *`,
-      [timezone, preferredTime, weeklyTargetHours, availability, userId],
+      [timezone, preferred_time, weekly_target_hours, availability, userId],
     );
     return result.rows[0];
   }

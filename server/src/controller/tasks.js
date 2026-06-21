@@ -124,8 +124,8 @@ const editStatus = async (req, res, next) => {
       );
 
       if (
-        weekProgress.rows[0] &&
-        parseFloat(weekProgress.rows[0].completion_rate) >= 1.0
+        weekProgress &&
+        parseFloat(weekProgress.completion_rate) >= 1.0
       ) {
         appEvents.emit('milestone:reached', {
           userId: req.user.id,

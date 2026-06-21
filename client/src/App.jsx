@@ -9,6 +9,7 @@ import Goals from './pages/Goals.jsx';
 import GoalDetail from './pages/GoalDetail.jsx';
 import Calendar from './pages/Calendar.jsx';
 import Progress from './pages/Progress.jsx';
+import Profile from './pages/Profile.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Observability from './pages/Observability.jsx';
@@ -37,6 +38,7 @@ export default function App() {
             <Route path='/goals/:id' element={<GoalDetail />} />
             <Route path='/calendar' element={<Calendar />} />
             <Route path='/progress' element={<Progress />} />
+            <Route path='/profile' element={<Profile />} />
             <Route path='/observability' element={<Observability />} />
           </Route>
         </Routes>

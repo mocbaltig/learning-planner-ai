@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 
 const userNavItems = [
@@ -183,7 +183,7 @@ export default function MainLayout() {
           <div className='hidden lg:block' />
 
           {/* User avatar */}
-          <div className='flex items-center gap-3'>
+          <Link to='/profile' className='flex items-center gap-3 hover:opacity-80 transition-opacity'>
             <div className='text-right hidden sm:block'>
               <p className='text-sm font-medium text-white'>{displayName}</p>
               <p className='text-xs text-slate-400'>Peserta Bootcamp</p>
@@ -191,7 +191,7 @@ export default function MainLayout() {
             <div className='w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white'>
               {initial}
             </div>
-          </div>
+          </Link>
         </header>
 
         {/* Page content */}

@@ -67,7 +67,7 @@ const me = async (req, res, next) => {
 
 const updateProfile = async (req, res, next) => {
   try {
-    const updated = await Profiles.updateByUserId(req.user.id, req.body);
+    const updated = await Profiles.updateByUserId(req.user.id, req.validated);
     if (!updated) {
       return next(new NotFoundError('Profile tidak ditemukan'));
     }
