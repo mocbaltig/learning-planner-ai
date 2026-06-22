@@ -12,10 +12,12 @@ export default defineConfig({
     host: '0.0.0.0',
     proxy: {
       '/api': {
-        // Gunakan nama service Docker, bukan localhost
-        target: 'http://server:3000',
+        // Local dev: forward ke backend native (localhost)
+        // Di production (Netlify), proxy ini tidak aktif — VITE_API_URL yang dipakai
+        target: 'http://localhost:3000',
         changeOrigin: true,
       },
     },
   },
-});
+});
+

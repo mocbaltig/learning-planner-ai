@@ -15,7 +15,13 @@ const progressRoutes = require('./routes/progress');
 
 const app = express();
 
-app.use(cors());
+// Di production, batasi CORS hanya ke domain frontend (Netlify).
+// Di local dev (FRONTEND_URL tidak di-set), izinkan semua origin.
+const corsOptions = process.env.FRONTEND_URL
+  ? { origin: process.env.FRONTEND_URL, credentials: true }
+  : {};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(requestLogger);
 
