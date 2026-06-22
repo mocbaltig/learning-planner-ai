@@ -14,10 +14,10 @@ export default defineConfig({
       '/api': {
         // Local dev: forward ke backend native (localhost)
         // Di production (Netlify), proxy ini tidak aktif — VITE_API_URL yang dipakai
-        target: 'http://localhost:3000',
+        target: 'https://learning-planner-ai-production.up.railway.app',
         changeOrigin: true,
       },
     },
   },
 });
-
+
