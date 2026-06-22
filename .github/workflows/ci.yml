@@ -62,18 +62,17 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
       - name: Deploy to Railway
-        # --service: nama service di Railway dashboard (cek Settings → Service Name)
         run: railway up --detach --service ${{ secrets.RAILWAY_SERVICE_NAME }}
         working-directory: ./server
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
       - name: Run database migrations
-        # railway run → inject env vars Railway (DATABASE_URL, dll) ke proses lokal
-        # node-pg-migrate idempoten: migration yg sudah jalan tidak akan diulang
         run: railway run --service ${{ secrets.RAILWAY_SERVICE_NAME }} npm run migrate:up
         working-directory: ./server
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
 
   # ─── Job 3: Build & Deploy Frontend ke Netlify ────────────────────
   deploy-frontend:
