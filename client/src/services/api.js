@@ -1,7 +1,12 @@
-// Di production (Netlify), gunakan URL Railway penuh.
-// Di local dev, Vite proxy akan forward '/api' ke backend.
-export const BASE_URL = "https://learning-planner-ai-production.up.railway.app" 
-console.log(BASE_URL)
+// Di production (Netlify), gunakan URL Railway dari env variable VITE_API_URL.
+// Di local dev, set VITE_API_URL di .env.local atau gunakan Vite proxy.
+
+// [LAMA - hardcoded, jangan dipakai]
+// export const BASE_URL = "https://learning-planner-ai-production.up.railway.app"
+// console.log(BASE_URL)
+
+// [BARU - baca dari env variable yang di-inject saat build oleh Vite]
+export const BASE_URL = import.meta.env.VITE_API_URL ?? '';
 async function request(path, options = {}) {
   const token = localStorage.getItem('token');
   const res = await fetch(`${BASE_URL}${path}`, {
