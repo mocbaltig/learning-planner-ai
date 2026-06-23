@@ -296,3 +296,19 @@ Error khusus ditangani oleh `errorHandler` middleware:
 | ![](./.screenshot/mpv-shot0007.jpg) |
 | ![](./.screenshot/mpv-shot0008.jpg) |
 | ![](./.screenshot/mpv-shot0009.jpg) |
+
+## Accessibility Audit
+
+Tool: Lighthouse
+
+| Metric | Score |
+|---------|---------|
+| Accessibility | 100 |
+| Best Practices | 96 |
+| SEO | 100 |
+
+Perbaikan:
+- Semantic HTML
+- ARIA labels
+- Keyboard navigation
+- Color contrast compliance
