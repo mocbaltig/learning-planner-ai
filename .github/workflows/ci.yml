@@ -78,12 +78,10 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
       - name: Run database migrations
-        run: railway run --service ${{ secrets.RAILWAY_SERVICE_NAME }} npm run migrate:up
+        run: npm run migrate:up
         working-directory: ./server
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}?sslmode=require&uselibpqcompat=true
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
   # ─── Job 3: Build & Deploy Frontend ke Netlify ────────────────────
   deploy-frontend:
