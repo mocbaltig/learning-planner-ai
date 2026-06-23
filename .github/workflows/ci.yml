@@ -74,13 +74,13 @@ jobs:
 
       - name: Deploy to Railway
         run: railway up --detach --service ${{ secrets.RAILWAY_SERVICE_NAME }}
-        working-directory: ./server
+        working-directory: server
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
       - name: Run database migrations
         run: npm run migrate:up
-        working-directory: ./server
+        working-directory: server
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
@@ -98,12 +98,12 @@ jobs:
           node-version: "20"
       - name: Install dependencies
         run: npm ci
-        working-directory: ./client
+        working-directory: client
       - name: Create .env file
         run: echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" > .env.production
       - name: Build production bundle
         run: npm run build
-        working-directory: ./client
+        working-directory: client
         env:
           # URL Railway di-inject saat build — terbake ke dalam bundle JS
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
@@ -111,7 +111,7 @@ jobs:
         run: npm install -g netlify-cli
       - name: Deploy to Netlify
         run: netlify deploy --prod --dir=dist --auth=$NETLIFY_AUTH_TOKEN --site=$NETLIFY_SITE_ID
-        working-directory: ./client
+        working-directory: client
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
