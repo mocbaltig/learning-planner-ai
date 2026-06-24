@@ -9,27 +9,32 @@ const {
 
 const SEED_EMAIL = 'user_seed@mail.com';
 const SEED_PASSWORD = 'seed1234';
+const ADMIN_EMAIL = 'admin_seed@mail.com';
+const ADMIN_PASSWORD = 'admin1234';
+
+async function cleanupUser(email) {
+  const res = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+  if (res.rows.length === 0) return;
+  const userId = res.rows[0].id;
+  console.log('  Cleaning existing data for:', email);
+  await db.query('DELETE FROM audit_logs WHERE user_id = $1', [userId]);
+  await db.query('DELETE FROM progress_snapshots WHERE user_id = $1', [userId]);
+  await db.query('DELETE FROM ai_recommendations WHERE user_id = $1', [userId]);
+  await db.query(
+    'DELETE FROM tasks WHERE goal_id IN (SELECT id FROM goals WHERE user_id = $1)',
+    [userId],
+  );
+  await db.query('DELETE FROM goals WHERE user_id = $1', [userId]);
+  await db.query('DELETE FROM profiles WHERE user_id = $1', [userId]);
+  await db.query('DELETE FROM users WHERE id = $1', [userId]);
+}
 
 async function seed() {
   console.log('Seeding database...\n');
 
-  // Cleanup existing seed user
-  const existing = await db.query('SELECT id FROM users WHERE email = $1', [SEED_EMAIL]);
-  if (existing.rows.length > 0) {
-    const userId = existing.rows[0].id;
-    console.log('Cleaning existing seed data for user:', userId);
-    await db.query('DELETE FROM audit_logs WHERE user_id = $1', [userId]);
-    await db.query('DELETE FROM progress_snapshots WHERE user_id = $1', [userId]);
-    await db.query('DELETE FROM ai_recommendations WHERE user_id = $1', [userId]);
-    await db.query(
-      'DELETE FROM tasks WHERE goal_id IN (SELECT id FROM goals WHERE user_id = $1)',
-      [userId],
-    );
-    await db.query('DELETE FROM goals WHERE user_id = $1', [userId]);
-    await db.query('DELETE FROM profiles WHERE user_id = $1', [userId]);
-    await db.query('DELETE FROM users WHERE id = $1', [userId]);
-    console.log('Done cleaning.\n');
-  }
+  // Cleanup existing seed users
+  await cleanupUser(SEED_EMAIL);
+  await cleanupUser(ADMIN_EMAIL);
 
   // Date helpers
   const weekStart = getCurrentWeekStart();
@@ -100,8 +105,6 @@ async function seed() {
   console.log('2. Profile created');
 
   // 2b. Create admin user
-  const ADMIN_EMAIL = 'admin_seed@mail.com';
-  const ADMIN_PASSWORD = 'admin1234';
   const adminPasswordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
   const adminRes = await db.query(
     'INSERT INTO users (email, password_hash, is_admin) VALUES ($1, $2, true) RETURNING id',

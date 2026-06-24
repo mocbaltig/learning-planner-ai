@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import { api } from '../services/api';
 import { getThisMonday } from '../utils/dateUtils';
 import { Sun, Sunset, Moon, Clock, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
@@ -60,7 +61,7 @@ function todayKey() {
   return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
 }
 
-export default function WeeklyCalendar({ onTaskClick }) {
+export default function WeeklyCalendar({ onTaskClick, lastUpdate }) {
   const [weekStart, setWeekStart]   = useState(getThisMonday);
   const [tasksByDay, setTasksByDay] = useState({});
   const [loading, setLoading]       = useState(false);
@@ -74,6 +75,23 @@ export default function WeeklyCalendar({ onTaskClick }) {
   useEffect(() => {
     dayRefs.current = dayRefs.current.slice(0, 7);
   }, []);
+
+  useEffect(() => {
+    if (!lastUpdate) return;
+    setTasksByDay(prev => {
+      const next = { ...prev };
+      for (const dateKey of Object.keys(next)) {
+        const idx = next[dateKey].findIndex(t => t.id === lastUpdate.taskId);
+        if (idx !== -1) {
+          const updated = [...next[dateKey]];
+          updated[idx] = { ...updated[idx], status: lastUpdate.status };
+          next[dateKey] = updated;
+          break;
+        }
+      }
+      return next;
+    });
+  }, [lastUpdate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,8 +132,9 @@ export default function WeeklyCalendar({ onTaskClick }) {
     setExporting(true);
     try {
       await api.download(`/export/weekly/ics?week_start=${weekStart}`, `jadwal-${weekStart}.ics`);
+      toast.success('Jadwal mingguan diunduh');
     } catch {
-      // api.download handles errors
+      toast.error('Gagal mengexport jadwal');
     } finally {
       setExporting(false);
     }

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { api } from '../services/api';
 import GoalCard from '../components/GoalCard.jsx';
 import LoadingState from '../components/ui/LoadingState';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import {
   Target,
   Plus,
@@ -25,6 +27,7 @@ export default function Goals() {
   const [loadError, setLoadError]     = useState(null);
   const [deleteError, setDeleteError] = useState(null);
   const [deletingId, setDeletingId]   = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const navigate = useNavigate();
 
   function fetchGoals() {
@@ -51,6 +54,7 @@ export default function Goals() {
       setDeadline('');
       setShowExtra(false);
       navigate(`/goals/${newGoal.id}`);
+      toast.success('Goal berhasil dibuat');
     } catch (err) {
       setCreateError(err.message || 'Gagal membuat goal. Coba lagi.');
     } finally {
@@ -58,13 +62,19 @@ export default function Goals() {
     }
   }
 
-  async function handleDelete(goalId, e) {
+  function handleDelete(goalId, e) {
     e.stopPropagation();
-    if (!window.confirm('Hapus goal ini beserta semua tasknya?')) return;
+    setConfirmDelete(goalId);
+  }
+
+  async function handleDeleteConfirmed() {
+    const goalId = confirmDelete;
     setDeletingId(goalId);
+    setConfirmDelete(null);
     try {
       await api.delete(`/goals/${goalId}`);
       setGoals(prev => prev.filter(g => g.id !== goalId));
+      toast('Goal berhasil dihapus', { icon: <Trash2 size={16} /> });
     } catch (err) {
       setDeleteError(err.message || 'Gagal menghapus goal.');
     } finally {
@@ -264,6 +274,14 @@ export default function Goals() {
           ))}
         </div>
       )}
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title='Hapus Goal?'
+        message='Hapus goal ini beserta semua tasknya?'
+        confirmLabel='Hapus'
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

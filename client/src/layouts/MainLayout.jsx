@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { api } from '../services/api';
 
 const userNavItems = [
@@ -201,6 +202,23 @@ export default function MainLayout() {
           <Outlet />
         </main>
       </div>
+      <Toaster
+        position='bottom-right'
+        closeButton
+        toastOptions={{
+          style: {
+            background: '#0f172a',
+            border: '1px solid rgba(255,255,255,0.08)',
+            color: '#e2e8f0',
+            fontSize: '14px',
+          },
+          classNames: {
+            toast: 'rounded-xl shadow-lg shadow-black/30',
+            success: '!border-emerald-500/30',
+            error: '!border-red-500/30',
+          },
+        }}
+      />
     </div>
   );
 }

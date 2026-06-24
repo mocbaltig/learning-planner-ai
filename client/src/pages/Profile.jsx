@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { toast } from 'sonner';
 import {
   Save,
-  CheckCircle2,
   Clock,
   Sun,
   Sunset,
@@ -83,7 +83,6 @@ export default function Profile() {
   const [loadError, setLoadError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
-  const [success, setSuccess] = useState(false);
 
   const [timezone, setTimezone] = useState('Asia/Jakarta');
   const [preferredTime, setPreferredTime] = useState('morning');
@@ -118,7 +117,6 @@ export default function Profile() {
     e.preventDefault();
     setSaving(true);
     setFormError(null);
-    setSuccess(false);
     try {
       const body = {
         timezone,
@@ -127,8 +125,7 @@ export default function Profile() {
         availability: mapToAvailability(availabilityMap),
       };
       await api.patch('/auth/me', body);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      toast.success('Profil berhasil diperbarui');
     } catch (err) {
       setFormError(err.message);
     } finally {
@@ -168,13 +165,6 @@ export default function Profile() {
             role='alert'
           >
             {formError}
-          </div>
-        )}
-
-        {success && (
-          <div className='mb-6 flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 text-emerald-400 text-sm'>
-            <CheckCircle2 size={16} />
-            Profil berhasil diperbarui
           </div>
         )}
 

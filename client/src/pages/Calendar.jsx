@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 import WeeklyCalendar from '../components/WeeklyCalendar';
 import { X, Clock, Sun, Sunset, Moon, CheckCircle2, SkipForward } from 'lucide-react';
 import { api } from '../services/api';
@@ -23,8 +24,6 @@ function formatDate(dateStr) {
 
 /* ── Task Detail Drawer ── */
 function TaskDrawer({ task, onClose, onStatusChange }) {
-  const [updating, setUpdating]       = useState(false);
-  const [statusError, setStatusError] = useState(null);
   const closeRef = useRef(null);
   const panelRef = useRef(null);
   const slot = SLOT_META[task.planned_slot] ?? SLOT_META.morning;
@@ -58,16 +57,16 @@ function TaskDrawer({ task, onClose, onStatusChange }) {
   }
 
   async function updateStatus(status) {
-    setUpdating(true);
-    setStatusError(null);
+    const prevStatus = task.status;
+    const label = status === 'done' ? 'Selesai' : 'Dilewati';
+    onClose();
+    onStatusChange?.(task.id, status);
     try {
       await api.patch(`/tasks/${task.id}/status`, { status });
-      onStatusChange?.(task.id, status);
-      onClose();
-    } catch (err) {
-      setStatusError(err.message || 'Gagal memperbarui status task.');
-    } finally {
-      setUpdating(false);
+      toast.success(`Task "${task.title}" ditandai ${label}`);
+    } catch {
+      onStatusChange?.(task.id, prevStatus);
+      toast.error(`Gagal memperbarui status task`);
     }
   }
 
@@ -127,28 +126,19 @@ function TaskDrawer({ task, onClose, onStatusChange }) {
             </span>
           </div>
 
-          {/* Status error */}
-          {statusError && (
-            <p className='text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2' role='alert'>
-              ⚠️ {statusError}
-            </p>
-          )}
-
           {/* Actions — hanya untuk todo */}
           {task.status === 'todo' && (
             <div className='flex gap-2 pt-1'>
               <button
-                disabled={updating}
                 onClick={() => updateStatus('done')}
-                className='flex-1 flex items-center justify-center gap-2 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 rounded-xl px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-50'
+                className='flex-1 flex items-center justify-center gap-2 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 rounded-xl px-4 py-2.5 text-sm font-medium transition-all'
               >
                 <CheckCircle2 size={15} />
                 Tandai Selesai
               </button>
               <button
-                disabled={updating}
                 onClick={() => updateStatus('skipped')}
-                className='flex items-center justify-center gap-2 bg-slate-500/10 hover:bg-slate-500/20 border border-slate-500/20 text-slate-400 rounded-xl px-4 py-2.5 text-sm transition-all disabled:opacity-50'
+                className='flex items-center justify-center gap-2 bg-slate-500/10 hover:bg-slate-500/20 border border-slate-500/20 text-slate-400 rounded-xl px-4 py-2.5 text-sm transition-all'
               >
                 <SkipForward size={15} />
                 Lewati
@@ -164,12 +154,12 @@ function TaskDrawer({ task, onClose, onStatusChange }) {
 /* ── Page ── */
 export default function Calendar() {
   const [selectedTask, setSelectedTask] = useState(null);
-  const [refreshKey, setRefreshKey]     = useState(0);
+  const [lastUpdate, setLastUpdate]     = useState(null);
   const lastFocusedRef = useRef(null);
 
-  function handleStatusChange() {
+  function handleStatusChange(taskId, newStatus) {
     setSelectedTask(null);
-    setRefreshKey(k => k + 1);
+    setLastUpdate({ taskId, status: newStatus });
     setTimeout(() => lastFocusedRef.current?.focus(), 0);
   }
 
@@ -201,7 +191,7 @@ export default function Calendar() {
 
       {/* Weekly calendar */}
       <WeeklyCalendar
-        key={refreshKey}
+        lastUpdate={lastUpdate}
         onTaskClick={(task) => {
           lastFocusedRef.current = document.activeElement;
           setSelectedTask(task);

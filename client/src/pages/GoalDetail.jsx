@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { api } from '../services/api';
 import { getThisMonday } from '../utils/dateUtils';
 import AISuggestionPanel from '../components/AISuggestionPanel.jsx';
@@ -23,6 +24,7 @@ import {
   CalendarClock,
 } from 'lucide-react';
 import RationaleBox from '../components/RationaleBox';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 
 const SLOT_META = {
   morning:   { label: 'Pagi',  Icon: Sun,    color: 'text-amber-400',   bg: 'bg-amber-500/10',  border: 'border-amber-500/30',  activeBg: 'bg-amber-500/20'  },
@@ -70,6 +72,7 @@ function ManualTaskForm({ goalId, weekStart, onCreated, onCancel }) {
         source: 'manual',
       });
       onCreated(task);
+      toast.success('Task berhasil ditambahkan');
       // Reset form
       setTitle('');
       setDescription('');
@@ -251,6 +254,7 @@ function RescheduleForm({ task, onRescheduled, onCancel }) {
         planned_slot: slot,
       });
       onRescheduled(updated);
+      toast.success('Task dijadwalkan ulang');
     } catch (err) {
       setError(err.message || 'Gagal reschedule. Coba lagi.');
     } finally {
@@ -374,6 +378,7 @@ export default function GoalDetail() {
   const [deletingId, setDeletingId]         = useState(null);
   const [reschedulingId, setReschedulingId] = useState(null); // taskId yang sedang di-reschedule
   const [deleteError, setDeleteError] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const [focusedTaskIndex, setFocusedTaskIndex] = useState(-1);
   const taskRefs = useRef([]);
 
@@ -443,13 +448,19 @@ export default function GoalDetail() {
     setShowManualForm(false);
   }
 
-  async function handleDeleteTask(taskId) {
-    if (!window.confirm('Hapus task ini?')) return;
+  function handleDeleteTask(taskId) {
+    setConfirmDelete(taskId);
+  }
+
+  async function handleDeleteConfirmed() {
+    const taskId = confirmDelete;
     setDeletingId(taskId);
     setDeleteError(null);
+    setConfirmDelete(null);
     try {
       await api.patch(`/tasks/${taskId}/status`, { status: 'skipped' });
       setAcceptedTasks(prev => prev.filter(t => t.id !== taskId));
+      toast('Task dihapus dari jadwal', { icon: <Trash2 size={16} /> });
     } catch (err) {
       setDeleteError(err.message || 'Gagal menghapus task.');
     } finally {
@@ -761,6 +772,14 @@ export default function GoalDetail() {
           </ul>
         )}
       </div>
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title='Hapus Task?'
+        message='Hapus task ini dari jadwal?'
+        confirmLabel='Hapus'
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }
