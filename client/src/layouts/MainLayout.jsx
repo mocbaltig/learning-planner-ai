@@ -118,7 +118,7 @@ export default function MainLayout() {
       >
         {/* Logo */}
         <div className='flex items-center gap-3 px-6 py-5 border-b border-slate-800'>
-          <div className='w-8 h-8 rounded-lg bg-emerald-700/30 flex items-center justify-center flex-shrink-0'>
+          <div className='w-10 h-8 rounded-lg bg-emerald-700/30 flex items-center justify-center flex-shrink-0'>
             <img
               alt='AI Learning Plan'
               src="/images/task-suggestion-logo.png"
