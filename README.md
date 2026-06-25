@@ -4,6 +4,62 @@
 
 ---
 
+## 📸 Application Screenshots
+
+### 1. Login Page
+
+Halaman autentikasi pengguna untuk masuk ke dalam aplikasi menggunakan email dan password.
+
+![](./.screenshot/mpv-shot0001.jpg)
+
+---
+
+### 2. Dashboard
+
+Dashboard utama yang menampilkan ringkasan progres belajar, jumlah task yang telah diselesaikan, serta daftar goals yang sedang aktif.
+
+![](./.screenshot/mpv-shot0002.jpg)
+
+---
+
+### 3. Goals Management
+
+Pengguna dapat membuat dan mengelola target belajar yang ingin dicapai.
+
+![](./.screenshot/mpv-shot0003.jpg)
+
+---
+
+### 4. Goal Detail
+
+Menampilkan informasi lengkap mengenai sebuah goal beserta fitur AI Learning Coach.
+
+![](./.screenshot/mpv-shot0003.jpg)
+
+---
+
+### 5. AI Learning Recommendation
+
+AI menghasilkan rekomendasi rencana belajar mingguan berdasarkan goal yang dipilih.
+
+![](./.screenshot/mpv-shot0005.jpg)
+
+---
+
+### 6. Accept or Reject Recommendation
+
+Pengguna dapat menerima atau menolak setiap rekomendasi yang diberikan oleh AI sebelum dimasukkan ke jadwal belajar.
+
+![](./.screenshot/mpv-shot0008.jpg)
+
+---
+
+### 7. Accepted Learning Tasks
+
+Daftar task yang telah diterima pengguna dan berhasil dijadwalkan ke dalam learning plan.
+
+![](./.screenshot/mpv-shot0009.jpg)
+
 ## Tech Stack
 
 | Layer      | Teknologi                                         |
@@ -282,20 +338,6 @@ Error khusus ditangani oleh `errorHandler` middleware:
 - [Architecture Decision Records](docs/adr/)
 
 ---
-
-## Screenshots
-
-|                                     |
-| ----------------------------------- |
-| ![](./.screenshot/mpv-shot0001.jpg) |
-| ![](./.screenshot/mpv-shot0002.jpg) |
-| ![](./.screenshot/mpv-shot0003.jpg) |
-| ![](./.screenshot/mpv-shot0004.jpg) |
-| ![](./.screenshot/mpv-shot0005.jpg) |
-| ![](./.screenshot/mpv-shot0006.jpg) |
-| ![](./.screenshot/mpv-shot0007.jpg) |
-| ![](./.screenshot/mpv-shot0008.jpg) |
-| ![](./.screenshot/mpv-shot0009.jpg) |
 
 ## Accessibility Audit
 
