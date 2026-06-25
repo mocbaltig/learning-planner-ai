@@ -2,6 +2,9 @@
 
 > Aplikasi web yang membantu peserta bootcamp merencanakan dan menjalani belajar secara konsisten, dengan bantuan AI sebagai learning coach.
 
+![preview](./docs/demo.gif)
+_Demo aplikasi — auth, goal, task, dan progress tracking_
+
 ---
 
 ## Tech Stack
@@ -313,17 +316,3 @@ Error khusus ditangani oleh `errorHandler` middleware:
 - [Architecture Decision Records](docs/adr/)
 
 ---
-
-## Screenshots
-
-|                                     |
-| ----------------------------------- |
-| ![](./.screenshot/mpv-shot0001.jpg) |
-| ![](./.screenshot/mpv-shot0002.jpg) |
-| ![](./.screenshot/mpv-shot0003.jpg) |
-| ![](./.screenshot/mpv-shot0004.jpg) |
-| ![](./.screenshot/mpv-shot0005.jpg) |
-| ![](./.screenshot/mpv-shot0006.jpg) |
-| ![](./.screenshot/mpv-shot0007.jpg) |
-| ![](./.screenshot/mpv-shot0008.jpg) |
-| ![](./.screenshot/mpv-shot0009.jpg) |
