@@ -13,7 +13,7 @@ export default defineConfig({
     proxy: {
       '/api': {
         // Gunakan nama service Docker, bukan localhost
-        target: 'http://server:3000',
+        target: 'http://localhost:3000',
         changeOrigin: true,
       },
     },
