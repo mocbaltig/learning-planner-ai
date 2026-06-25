@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { api } from '../services/api';
+import { api, getCached, invalidateCache } from '../services/api';
 import { getThisMonday } from '../utils/dateUtils';
 import { Sun, Sunset, Moon, Clock, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import EmptyState from './ui/EmptyState';
@@ -91,14 +91,15 @@ export default function WeeklyCalendar({ onTaskClick, lastUpdate }) {
       }
       return next;
     });
-  }, [lastUpdate]);
+    invalidateCache(`/tasks?week_start=${weekStart}`);
+  }, [lastUpdate, weekStart]);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    api.get(`/tasks?week_start=${weekStart}`)
+    getCached(`/tasks?week_start=${weekStart}`)
       .then(data => {
         if (cancelled) return;
         // Tangani dua format: flat array ATAU { week_start, tasks: {} }
@@ -229,7 +230,7 @@ export default function WeeklyCalendar({ onTaskClick, lastUpdate }) {
         <div className='bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center' role='alert'>
           <p className='text-red-400 font-medium mb-3'>⚠️ {error}</p>
           <button
-            onClick={() => setRetryKey(k => k + 1)}
+            onClick={() => { invalidateCache(`/tasks?week_start=${weekStart}`); setRetryKey(k => k + 1); }}
             className='bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 rounded-xl px-4 py-2 text-sm font-medium transition-all'
           >
             Coba lagi

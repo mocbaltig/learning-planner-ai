@@ -1,5 +1,27 @@
 const BASE_URL = '/api';
 
+/* ── Simple in-memory cache for GET requests ── */
+const cache = new Map();
+const MAX_CACHE = 5;
+
+export async function getCached(path, ttlMs = 30000) {
+  const cached = cache.get(path);
+  if (cached && Date.now() - cached.time < ttlMs) {
+    return cached.data;
+  }
+  const data = await request(path);
+  if (cache.size >= MAX_CACHE) {
+    const oldest = cache.keys().next().value;
+    cache.delete(oldest);
+  }
+  cache.set(path, { data, time: Date.now() });
+  return data;
+}
+
+export function invalidateCache(path) {
+  cache.delete(path);
+}
+
 async function request(path, options = {}) {
   const token = localStorage.getItem('token');
   const res = await fetch(`${BASE_URL}${path}`, {
