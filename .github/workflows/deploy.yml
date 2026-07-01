@@ -1,0 +1,94 @@
+name: Production Build and Deploy Monolith
+
+on:
+  push:
+    branches:
+      - production # Strict branch guard for your public repo
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    name: Build ${{ matrix.app }} Image (GitHub Hosted)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        # Spins up two runner instances in parallel
+        app: [client, server]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Metadata (Tags, Labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.app }}
+          tags: |
+            type=raw,value=latest
+            type=sha,value=${{ github.sha }}
+
+      - name: Build and Push Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.app }}
+          # Points directly to your custom production Dockerfiles
+          file: ./${{ matrix.app }}/Dockerfile.production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy Package (NAT VPS Self-Hosted)
+    needs: build-and-push # Waits for BOTH matrix builds to turn green
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Configuration Files
+        uses: actions/checkout@v4
+
+      - name: Prepare Workspace Directories
+        run: |
+          mkdir -p ~/app
+
+      - name: Inject Production Environment Secrets
+        run: |
+          # Dumps your hidden GitHub secrets directly into the local environment file
+          echo "${{ secrets.PROD_ENV }}" > ~/app/.env
+
+      - name: Sync Orchestration Configuration
+        run: |
+          cp docker-compose.yml ~/app/docker-compose.yml
+
+      - name: Authenticate Local Docker to Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull Images and Spin Up Containers
+        run: |
+          cd ~/app
+          docker compose pull
+          docker compose up -d
+
+      - name: Prune Stale Docker Assets
+        run: |
+          # Crucial for lightweight NAT VPS environments to prevent disk depletion
+          docker image prune -f
