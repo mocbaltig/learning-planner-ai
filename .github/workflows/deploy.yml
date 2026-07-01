@@ -3,24 +3,41 @@ name: Production Build and Deploy Monolith
 on:
   push:
     branches:
-      - production # Strict branch guard for your public repo
+      - production
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push:
-    name: Build ${{ matrix.app }} Image (GitHub Hosted)
+  detect-changes:
+    name: Check Modified Directories
+    runs-on: ubuntu-latest
+    outputs:
+      client: ${{ steps.filter.outputs.client }}
+      server: ${{ steps.filter.outputs.server }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for file changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            client:
+              - 'client/**'
+            server:
+              - 'server/**'
+
+  build-client:
+    name: Build Client Image (GitHub Hosted)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.client == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-    strategy:
-      matrix:
-        # Spins up two runner instances in parallel
-        app: [client, server]
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,7 +56,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.app }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-client
           tags: |
             type=raw,value=latest
             type=sha,value=${{ github.sha }}
@@ -47,9 +64,8 @@ jobs:
       - name: Build and Push Image
         uses: docker/build-push-action@v5
         with:
-          context: ./${{ matrix.app }}
-          # Points directly to your custom production Dockerfiles
-          file: ./${{ matrix.app }}/Dockerfile.production
+          context: ./client
+          file: ./client/Dockerfile.production
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -59,18 +75,71 @@ jobs:
       - name: Clean up old GHCR images
         uses: actions/delete-package-versions@v5
         with:
-          package-name: "learning-planner-ai-${{ matrix.app }}"
+          package-name: "learning-planner-ai-client"
           package-type: "container"
-          # Keeps the 'latest' tag, the current active SHA, plus the 3 most recent backups
           min-versions-to-keep: 5
-          # Automatically purges any image layer that no longer has a tag attached
+          delete-only-untagged-versions: "true"
+
+  build-server:
+    name: Build Server Image (GitHub Hosted)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.server == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract Metadata (Tags, Labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-server
+          tags: |
+            type=raw,value=latest
+            type=sha,value=${{ github.sha }}
+
+      - name: Build and Push Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          file: ./server/Dockerfile.production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Clean up old GHCR images
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: "learning-planner-ai-server"
+          package-type: "container"
+          min-versions-to-keep: 5
           delete-only-untagged-versions: "true"
 
   deploy:
     name: Deploy Package (NAT VPS Self-Hosted)
-    needs: build-and-push # Waits for BOTH matrix builds to turn green
+    needs: [detect-changes, build-client, build-server]
+    # Runs only if changes exist and relevant builds pass or skip
+    if: |
+      always() &&
+      (needs.detect-changes.outputs.client == 'true' || needs.detect-changes.outputs.server == 'true') &&
+      (needs.build-client.result == 'success' || needs.build-client.result == 'skipped') &&
+      (needs.build-server.result == 'success' || needs.build-server.result == 'skipped')
     runs-on: self-hosted
-
     steps:
       - name: Checkout Configuration Files
         uses: actions/checkout@v4
@@ -81,7 +150,6 @@ jobs:
 
       - name: Inject Production Environment Secrets
         run: |
-          # Dumps your hidden GitHub secrets directly into the local environment file
           echo "${{ secrets.PROD_ENV }}" > ~/app/.env
 
       - name: Sync Orchestration Configuration
@@ -103,5 +171,4 @@ jobs:
 
       - name: Prune Stale Docker Assets
         run: |
-          # Crucial for lightweight NAT VPS environments to prevent disk depletion
           docker image prune -f
