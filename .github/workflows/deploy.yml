@@ -5,6 +5,11 @@ on:
     branches:
       - production
 
+# Strict global permissions fallback
+permissions:
+  contents: read
+  packages: write
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
@@ -36,9 +41,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.client == 'true'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -71,7 +73,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Tuned to min for production-optimized frontend assets
+          cache-to: type=gha,mode=min
 
       - name: Clean up old GHCR images
         uses: actions/delete-package-versions@v5
@@ -86,9 +89,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.server == 'true'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -134,7 +134,6 @@ jobs:
   deploy:
     name: Deploy Package (NAT VPS Self-Hosted)
     needs: [detect-changes, build-client, build-server]
-    # Runs only if changes exist and relevant builds pass or skip
     if: |
       always() &&
       (needs.detect-changes.outputs.client == 'true' || needs.detect-changes.outputs.server == 'true') &&
@@ -167,7 +166,8 @@ jobs:
       - name: Pull Images and Spin Up Containers
         run: |
           cd ~/app
-          docker compose pull
+          # Quiet download reduces log sizes and network overhead
+          docker compose pull --quiet
           docker compose up -d
 
       - name: Prune Stale Docker Assets
