@@ -38,7 +38,7 @@ const client = new GoogleGenAI({ apiKey: config.geminiKey });
 
 const sharedConfig = {
   responseMimeType: 'application/json',
-  thinkingConfig: { thinkingBudget: 2048 },
+  // thinkingConfig: { thinkingBudget: 2048 },
 };
 
 async function callLLMReal(type, context, userId) {
