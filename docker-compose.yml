@@ -4,6 +4,8 @@ services:
   db:
     image: postgres:16
     env_file: .env # Reads from the unified .env dropped by GitHub Actions
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
