@@ -13,7 +13,7 @@ services:
       retries: 5
 
   server:
-    image: ghcr.io/${GITHUB_ACTOR}/${IMAGE_NAME}-server:latest
+    image: ghcr.io/${IMAGE_NAME}-server:latest
     container_name: web_server_prod
     env_file: .env # Reads from the unified .env dropped by GitHub Actions
     depends_on:
@@ -23,7 +23,7 @@ services:
       - "127.0.0.1:3000:3000"
 
   client:
-    image: ghcr.io/${GITHUB_ACTOR}/${IMAGE_NAME}-client:latest
+    image: ghcr.io/${IMAGE_NAME}-client:latest
     container_name: web_client_prod
     ports:
       - "127.0.0.1:80:80"
