@@ -56,6 +56,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Clean up old GHCR images
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: "learning-planner-ai-${{ matrix.app }}"
+          package-type: "container"
+          # Keeps the 'latest' tag, the current active SHA, plus the 3 most recent backups
+          min-versions-to-keep: 5
+          # Automatically purges any image layer that no longer has a tag attached
+          delete-only-untagged-versions: "true"
+
   deploy:
     name: Deploy Package (NAT VPS Self-Hosted)
     needs: build-and-push # Waits for BOTH matrix builds to turn green
