@@ -40,6 +40,8 @@ const reschedulePayloadSchema = z.object({
 module.exports = {
   clientSuggestPayloadSchema,
   aiSuggestionPayloadSchema,
+  aiTaskPayloadSchema,
   aiRescheduleOutputSchema,
+  aiRescheduleTaskSchema,
   reschedulePayloadSchema,
 };

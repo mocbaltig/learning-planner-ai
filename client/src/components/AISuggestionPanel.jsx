@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { useState, useEffect, useRef } from 'react';
+import { api, streamSSE } from '../services/api';
 import { getThisMonday } from '../utils/dateUtils';
 import {
   Sparkles,
@@ -10,7 +10,6 @@ import {
   Sunset,
   Moon,
   PartyPopper,
-  CalendarCheck,
 } from 'lucide-react';
 import RationaleBox from './RationaleBox';
 import ConfidenceBadge from './ConfidenceBadge';
@@ -52,26 +51,51 @@ export default function AISuggestionPanel({ goalId, weekStart, onAccept }) {
   const [acceptedTasks, setAcceptedTasks] = useState([]);
   const [recommendationId, setRecommendationId] = useState(null);
   const [acceptError, setAcceptError] = useState(null);
+  const [streamedTasks, setStreamedTasks] = useState({});
+  const [streamedSummary, setStreamedSummary] = useState(null);
+  const streamData = useRef({ tasks: {}, summary: null });
 
-  /* Fetch saran AI */
+  /* Fetch saran AI via SSE streaming */
   async function fetchSuggestions() {
     setLoading(true);
     setError(null);
     setSuggestions(null);
     setTaskStates({});
     setAcceptedTasks([]);
-    try {
-      const data = await api.post('/ai/plan/suggest', {
-        goal_id: goalId,
-        week_start: resolvedWeekStart,
-      });
-      setSuggestions(data);
-      setRecommendationId(data.id);
-    } catch (err) {
-      setError(err.message || 'Gagal memuat saran AI');
-    } finally {
-      setLoading(false);
-    }
+    setStreamedTasks({});
+    setStreamedSummary(null);
+    streamData.current = { tasks: {}, summary: null };
+
+    streamSSE('/ai/plan/suggest/stream', {
+      goal_id: goalId,
+      week_start: resolvedWeekStart,
+    }, {
+      onTask: ({ index, task }) => {
+        streamData.current.tasks[index] = task;
+        setStreamedTasks({ ...streamData.current.tasks });
+      },
+      onSummary: ({ summary }) => {
+        streamData.current.summary = summary;
+        setStreamedSummary(summary);
+      },
+      onDone: ({ recommendationId: recId, confidence }) => {
+        const sorted = Object.keys(streamData.current.tasks)
+          .sort((a, b) => Number(a) - Number(b))
+          .map((k) => streamData.current.tasks[k]);
+        setSuggestions({
+          id: recId,
+          tasks: sorted,
+          summary: streamData.current.summary || '',
+          confidence,
+        });
+        setRecommendationId(recId);
+        setLoading(false);
+      },
+      onError: (err) => {
+        setError(err.message || 'Gagal memuat saran AI');
+        setLoading(false);
+      },
+    });
   }
 
   /* Terima satu task → POST /tasks */
@@ -107,6 +131,97 @@ export default function AISuggestionPanel({ goalId, weekStart, onAccept }) {
     setTaskStates((prev) => ({ ...prev, [index]: 'rejected' }));
   }
 
+  /* ── Card renderers ── */
+
+  function renderSkeleton(i) {
+    return (
+      <div key={`skel-${i}`} className='bg-[#0f172a] border border-white/5 rounded-2xl p-5 space-y-3 animate-pulse'>
+        <div className='h-4 bg-white/5 rounded-full w-3/4' />
+        <div className='h-3 bg-white/5 rounded-full w-full' />
+        <div className='h-3 bg-white/5 rounded-full w-4/5' />
+        <div className='flex gap-2 mt-4'>
+          <div className='h-8 w-24 bg-white/5 rounded-xl' />
+          <div className='h-8 w-24 bg-white/5 rounded-xl' />
+        </div>
+      </div>
+    );
+  }
+
+  function renderTaskCard(task, i) {
+    const state = taskStates[i];
+    const slot = SLOT_META[task.planned_slot] ?? SLOT_META.morning;
+    const SlotIcon = slot.Icon;
+
+    if (state === 'accepted') {
+      return (
+        <div key={i} className='bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-5 flex items-center gap-3 opacity-70'>
+          <CheckCircle2 className='text-emerald-400 flex-shrink-0' size={20} />
+          <p className='text-emerald-300 text-sm font-medium'>
+            &quot;{task.title}&quot; ditambahkan ke jadwal
+          </p>
+        </div>
+      );
+    }
+
+    if (state === 'rejected') {
+      return (
+        <div key={i} className='bg-white/3 border border-white/5 rounded-2xl p-5 flex items-center gap-3 opacity-40 line-through'>
+          <XCircle className='text-slate-500 flex-shrink-0' size={20} />
+          <p className='text-slate-500 text-sm'>{task.title}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        key={i}
+        id={`suggestion-card-${i}`}
+        className='bg-[#0f172a] border border-white/10 rounded-2xl p-5 hover:border-indigo-500/30 transition-all space-y-3'
+      >
+        <h4 className='text-white font-semibold text-base leading-snug'>{task.title}</h4>
+        {task.description && (
+          <p className='text-slate-400 text-sm leading-relaxed'>{task.description}</p>
+        )}
+        <RationaleBox rationale={task.rationale} />
+        <div className='flex flex-wrap gap-2 text-xs'>
+          <span className='inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-slate-300'>
+            <Clock size={11} />
+            {task.duration_estimate} menit
+          </span>
+          <span className={`inline-flex items-center gap-1.5 ${slot.bg} rounded-full px-3 py-1 ${slot.color}`}>
+            <SlotIcon size={11} />
+            {slot.label}
+          </span>
+          {task.planned_date && (
+            <span className='inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-slate-400'>
+              📅 {task.planned_date}
+            </span>
+          )}
+        </div>
+        <div className='flex gap-2 pt-1'>
+          <button
+            id={`accept-task-${i}`}
+            onClick={() => handleAccept(task, i)}
+            disabled={state === 'loading'}
+            className='flex-1 flex items-center justify-center gap-2 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 rounded-xl px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-wait'
+          >
+            <CheckCircle2 size={15} />
+            {state === 'loading' ? 'Menyimpan…' : 'Terima'}
+          </button>
+          <button
+            id={`reject-task-${i}`}
+            onClick={() => handleReject(i)}
+            disabled={state === 'loading'}
+            className='flex-1 flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-xl px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-50'
+          >
+            <XCircle size={15} />
+            Tolak
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   /* Cek apakah semua task sudah diproses */
   const allProcessed =
     suggestions?.tasks?.length > 0 &&
@@ -135,14 +250,38 @@ export default function AISuggestionPanel({ goalId, weekStart, onAccept }) {
   }
 
   /* ── Render: LOADING ── */
-  if (loading) return <LoadingState variant='card' count={3} message='Memuat saran AI' />;
+  if (loading) {
+    const streamedKeys = Object.keys(streamedTasks);
+    if (streamedKeys.length === 0) {
+      return <LoadingState variant='card' count={3} message='Memuat saran AI' />;
+    }
+
+    const maxIndex = Math.max(...streamedKeys.map(Number));
+    const cards = Array.from({ length: maxIndex + 1 }, (_, i) =>
+      streamedTasks[i] !== undefined ? renderTaskCard(streamedTasks[i], i) : renderSkeleton(i)
+    );
+
+    return (
+      <div className='space-y-4' aria-busy='true' role='region' aria-live='polite'>
+        {streamedSummary && (
+          <div className='bg-indigo-500/10 border border-indigo-500/20 rounded-2xl px-5 py-4 flex gap-3'>
+            <Sparkles className='text-indigo-400 flex-shrink-0 mt-0.5' size={16} />
+            <div className='flex-1'>
+              <p className='text-slate-300 text-sm leading-relaxed'>{streamedSummary}</p>
+            </div>
+          </div>
+        )}
+        {cards}
+      </div>
+    );
+  }
 
   /* ── Render: ERROR ── */
   if (error) return <ErrorState message={error} onRetry={fetchSuggestions} buttonId='ai-retry-btn' />;
 
   /* ── Render: EMPTY ── */
   if (suggestions?.tasks?.length === 0) return (
-    <EmptyState icon={CalendarCheck} title='Jadwal minggu ini sudah penuh' description='AI tidak menemukan slot kosong. Coba lagi minggu depan.' />
+    <EmptyState icon={Sparkles} title='AI tidak dapat memberikan saran' description='Coba lagi dengan goal atau minggu yang berbeda.' />
   );
 
   /* ── Render: DONE ── */
@@ -176,88 +315,7 @@ export default function AISuggestionPanel({ goalId, weekStart, onAccept }) {
       )}
 
       {/* Kartu per task */}
-      {suggestions.tasks.map((task, i) => {
-        const state = taskStates[i];
-        const slot  = SLOT_META[task.planned_slot] ?? SLOT_META.morning;
-        const SlotIcon = slot.Icon;
-
-        if (state === 'accepted') {
-          return (
-            <div key={i} className='bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-5 flex items-center gap-3 opacity-70'>
-              <CheckCircle2 className='text-emerald-400 flex-shrink-0' size={20} />
-              <p className='text-emerald-300 text-sm font-medium'>
-                &quot;{task.title}&quot; ditambahkan ke jadwal
-              </p>
-            </div>
-          );
-        }
-
-        if (state === 'rejected') {
-          return (
-            <div key={i} className='bg-white/3 border border-white/5 rounded-2xl p-5 flex items-center gap-3 opacity-40 line-through'>
-              <XCircle className='text-slate-500 flex-shrink-0' size={20} />
-              <p className='text-slate-500 text-sm'>{task.title}</p>
-            </div>
-          );
-        }
-
-        return (
-          <div
-            key={i}
-            id={`suggestion-card-${i}`}
-            className='bg-[#0f172a] border border-white/10 rounded-2xl p-5 hover:border-indigo-500/30 transition-all space-y-3'
-          >
-            {/* Title */}
-            <h4 className='text-white font-semibold text-base leading-snug'>{task.title}</h4>
-
-            {/* Description */}
-            {task.description && (
-              <p className='text-slate-400 text-sm leading-relaxed'>{task.description}</p>
-            )}
-
-            <RationaleBox rationale={task.rationale} />
-
-            {/* Meta */}
-            <div className='flex flex-wrap gap-2 text-xs'>
-              <span className='inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-slate-300'>
-                <Clock size={11} />
-                {task.duration_estimate} menit
-              </span>
-              <span className={`inline-flex items-center gap-1.5 ${slot.bg} rounded-full px-3 py-1 ${slot.color}`}>
-                <SlotIcon size={11} />
-                {slot.label}
-              </span>
-              {task.planned_date && (
-                <span className='inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-slate-400'>
-                  📅 {task.planned_date}
-                </span>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className='flex gap-2 pt-1'>
-              <button
-                id={`accept-task-${i}`}
-                onClick={() => handleAccept(task, i)}
-                disabled={state === 'loading'}
-                className='flex-1 flex items-center justify-center gap-2 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 rounded-xl px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-wait'
-              >
-                <CheckCircle2 size={15} />
-                {state === 'loading' ? 'Menyimpan…' : 'Terima'}
-              </button>
-              <button
-                id={`reject-task-${i}`}
-                onClick={() => handleReject(i)}
-                disabled={state === 'loading'}
-                className='flex-1 flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-xl px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-50'
-              >
-                <XCircle size={15} />
-                Tolak
-              </button>
-            </div>
-          </div>
-        );
-      })}
+      {suggestions.tasks.map((task, i) => renderTaskCard(task, i))}
 
       {/* Progress counter */}
       <p className='text-center text-slate-500 text-xs' aria-live='polite'>

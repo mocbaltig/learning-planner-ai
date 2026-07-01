@@ -5,8 +5,9 @@ const AIRecommendations = require('../models/ai_recommendations');
 const ProgressSnapshots = require('../models/progress_snapshots');
 const AuditLogs = require('../models/audit_logs');
 const { NotFoundError, UnprocessableEntityError, ClientError } = require('../exceptions');
-const { callLLM, validateAIOutput } = require('../services/llm');
-const { aiRescheduleOutputSchema } = require('../validator/ai-schema');
+const { callLLM, callLLMStream, validateAIOutput } = require('../services/llm');
+const { aiSuggestionPayloadSchema, aiTaskPayloadSchema, aiRescheduleOutputSchema, aiRescheduleTaskSchema } = require('../validator/ai-schema');
+const { SchemaStream } = require('schema-stream');
 const logger = require('../utils/logger');
 const { acceptanceRate } = require('../utils/metrics');
 const { computeConfidence } = require('../utils/confidence');
@@ -240,6 +241,251 @@ const reschedule = async (req, res, next) => {
   }
 };
 
+/* ── SSE Helpers ─────────────────────────────────────────── */
+
+function initSSE(res) {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+}
+
+function sendEvent(res, event, data) {
+  res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
+/* ── Streaming: Suggest ──────────────────────────────────── */
+
+const createSuggestionStream = async (req, res, next) => {
+  try {
+    const { goal_id: goalId, week_start: weekStart } = req.validated;
+    const goal = await Goals.findById(goalId, req.user.id);
+    if (!goal) return next(new NotFoundError('Goal tidak ditemukan'));
+
+    const profile = await Profiles.findByUserId(req.user.id);
+    if (!profile) return next(new NotFoundError('Profile tidak ditemukan'));
+
+    const weekEnd = getWeekEnd(new Date(weekStart));
+    const existingTasks = await Tasks.findByWeekStart(req.user.id, weekStart, weekEnd);
+
+    const context = {
+      week_start: weekStart,
+      week_end: weekEnd,
+      goal: { title: goal.title, description: goal.description, deadline: goal.deadline },
+      weekly_target_hours: profile.weekly_target_hours,
+      preferred_time: profile.preferred_time,
+      existing_tasks: existingTasks.map((t) => ({
+        title: t.title, planned_date: t.planned_date, planned_slot: t.planned_slot,
+      })),
+    };
+
+    initSSE(res);
+
+    let aborted = false;
+    req.on('close', () => { aborted = true; });
+
+    const { chunks, done } = await callLLMStream('suggest', context, req.user.id);
+
+    const parser = new SchemaStream(aiSuggestionPayloadSchema, {
+      typeDefaults: { string: undefined, number: undefined, boolean: undefined },
+    });
+    const transform = parser.parse();
+    const writer = transform.writable.getWriter();
+    const reader = transform.readable.getReader();
+
+    let fullText = '';
+    const feed = (async () => {
+      for await (const chunk of chunks) {
+        if (aborted) break;
+        fullText += chunk;
+        await writer.write(new TextEncoder().encode(chunk));
+      }
+      if (!aborted) await writer.close();
+    })();
+
+    let prevTaskCount = 0;
+    let gotSummary = false;
+
+    while (true) {
+      const { value, done: readerDone } = await reader.read();
+      if (readerDone) break;
+      if (aborted) return;
+
+      let partial;
+      try {
+        partial = JSON.parse(new TextDecoder().decode(value));
+      } catch {
+        continue;
+      }
+
+      if (partial.tasks) {
+        for (let i = prevTaskCount; i < partial.tasks.length; i++) {
+          const task = partial.tasks[i];
+          if (!task) continue;
+          const result = aiTaskPayloadSchema.safeParse(task);
+          if (result.success) {
+            sendEvent(res, 'task', { index: i, task: result.data });
+            prevTaskCount = i + 1;
+          }
+        }
+      }
+      if (!gotSummary && partial.summary && typeof partial.summary === 'string') {
+        sendEvent(res, 'summary', { summary: partial.summary });
+        gotSummary = true;
+      }
+    }
+
+    await feed;
+
+    if (aborted) return;
+
+    const { tokenCount } = await done;
+    const output = validateAIOutput(fullText);
+    if (!output) {
+      sendEvent(res, 'error', { code: 'VALIDATION_FAILED', message: 'AI tidak dapat memberikan saran yang valid. Coba lagi.' });
+      return res.end();
+    }
+
+    const recId = await AIRecommendations.create({
+      user_id: req.user.id, type: 'suggest', input_context: context, output, token_count: tokenCount,
+    });
+
+    sendEvent(res, 'done', { recommendationId: recId, confidence: computeConfidence(context) });
+    res.end();
+  } catch (err) {
+    if (res.headersSent) {
+      sendEvent(res, 'error', { code: 'STREAM_ERROR', message: err.message });
+      return res.end();
+    }
+    next(err);
+  }
+};
+
+/* ── Streaming: Reschedule ───────────────────────────────── */
+
+const rescheduleStream = async (req, res, next) => {
+  try {
+    const { task_ids } = req.validated;
+    if (!task_ids || !Array.isArray(task_ids) || task_ids.length === 0) {
+      return next(new ClientError('task_ids harus berupa array UUID yang tidak kosong'));
+    }
+
+    const overdueTasks = await Tasks.findOverdueTasksByIds(req.user.id, task_ids);
+    const weekStart = getCurrentWeekStart();
+    const weekTasks = await Tasks.findTasksByWeek(req.user.id, weekStart);
+    const todoWeekTasks = weekTasks.filter((t) => t.status === 'todo');
+
+    const profile = await Profiles.getProfile(req.user.id);
+    const week = getCurrentWeek();
+    await ProgressSnapshots.recalculateProgress(req.user.id, weekStart);
+    const progress = await ProgressSnapshots.getProgress(req.user.id, week);
+
+    const baseContext = {
+      overdue_tasks: overdueTasks.map((t) => ({
+        id: t.id, title: t.title, duration_estimate: t.duration_estimate, original_date: t.planned_date,
+      })),
+      current_week_tasks: todoWeekTasks.map((t) => ({
+        planned_date: t.planned_date, planned_slot: t.planned_slot, duration_estimate: t.duration_estimate,
+      })),
+      availability: profile?.availability || {},
+      remaining_capacity: (profile?.weekly_target_hours || 5) - (progress?.completed_hours || 0),
+    };
+
+    initSSE(res);
+
+    let aborted = false;
+    req.on('close', () => { aborted = true; });
+
+    const { chunks, done } = await callLLMStream('reschedule', baseContext, req.user.id);
+
+    const parser = new SchemaStream(aiRescheduleOutputSchema, {
+      typeDefaults: { string: undefined, number: undefined, boolean: undefined },
+    });
+    const transform = parser.parse();
+    const writer = transform.writable.getWriter();
+    const reader = transform.readable.getReader();
+
+    let fullText = '';
+    const feed = (async () => {
+      for await (const chunk of chunks) {
+        if (aborted) break;
+        fullText += chunk;
+        await writer.write(new TextEncoder().encode(chunk));
+      }
+      if (!aborted) await writer.close();
+    })();
+
+    let prevTaskCount = 0;
+    let gotSummary = false;
+
+    while (true) {
+      const { value, done: readerDone } = await reader.read();
+      if (readerDone) break;
+      if (aborted) return;
+
+      let partial;
+      try {
+        partial = JSON.parse(new TextDecoder().decode(value));
+      } catch {
+        continue;
+      }
+
+      if (partial.tasks) {
+        for (let i = prevTaskCount; i < partial.tasks.length; i++) {
+          const task = partial.tasks[i];
+          if (!task) continue;
+          const result = aiRescheduleTaskSchema.safeParse(task);
+          if (result.success) {
+            sendEvent(res, 'task', { index: i, task: result.data });
+            prevTaskCount = i + 1;
+          }
+        }
+      }
+      if (!gotSummary && partial.summary && typeof partial.summary === 'string') {
+        sendEvent(res, 'summary', { summary: partial.summary });
+        gotSummary = true;
+      }
+    }
+
+    await feed;
+
+    if (aborted) return;
+
+    const { tokenCount } = await done;
+    const output = validateAIOutput(fullText, aiRescheduleOutputSchema);
+    if (!output) {
+      sendEvent(res, 'error', { code: 'VALIDATION_FAILED', message: 'AI tidak dapat menjadwalkan ulang saat ini. Coba lagi.' });
+      return res.end();
+    }
+
+    const recId = await AIRecommendations.create({
+      user_id: req.user.id, type: 'reschedule',
+      input_context: JSON.stringify(baseContext), output: JSON.stringify(output), token_count: tokenCount,
+    });
+
+    await AuditLogs.create({
+      user_id: req.user.id, action: 'reschedule_generated', recommendation_id: recId,
+      metadata: { task_ids, week_start: weekStart },
+    });
+    acceptanceRate.set(await AIRecommendations.getAcceptanceRate());
+
+    sendEvent(res, 'done', {
+      recommendationId: recId,
+      confidence: computeConfidence({
+        week_start: weekStart, weekly_target_hours: profile?.weekly_target_hours || 5,
+        preferred_time: profile?.preferred_time, existing_tasks: todoWeekTasks,
+      }),
+    });
+    res.end();
+  } catch (err) {
+    if (res.headersSent) {
+      sendEvent(res, 'error', { code: 'STREAM_ERROR', message: err.message });
+      return res.end();
+    }
+    next(err);
+  }
+};
+
 const getTokenUsage = async (req, res, next) => {
   try {
     const usage = await AIRecommendations.getTokenUsage(req.user.id, 100);
@@ -251,7 +497,9 @@ const getTokenUsage = async (req, res, next) => {
 
 module.exports = {
   createSuggestion,
+  createSuggestionStream,
   editRecommendationById,
   reschedule,
+  rescheduleStream,
   getTokenUsage,
 };

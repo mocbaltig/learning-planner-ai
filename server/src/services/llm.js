@@ -1,8 +1,5 @@
 require('dotenv').config();
-const {
-  GoogleGenerativeAI,
-  GoogleGenerativeAIFetchError,
-} = require('@google/generative-ai');
+const { GoogleGenAI, ApiError } = require('@google/genai');
 const fs = require('fs');
 const path = require('path');
 const config = require('../utils/config');
@@ -23,8 +20,6 @@ function sanitizeContext(context) {
 
 function validateAIOutput(raw, schema = aiSuggestionPayloadSchema) {
   try {
-    // const cleanedRaw = raw.replace(/^```json|```$/g, '').trim();
-    // const parsed = JSON.parse(cleanedRaw);
     const parsed =
       typeof raw === 'object'
         ? raw
@@ -39,38 +34,45 @@ function loadSystemPrompt() {
   return fs.readFileSync(path.join(__dirname, '../prompts/system.md'), 'utf-8');
 }
 
-const genAI = new GoogleGenerativeAI(config.geminiKey);
-const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+const client = new GoogleGenAI({ apiKey: config.geminiKey });
+
+const sharedConfig = {
+  responseMimeType: 'application/json',
+  thinkingConfig: { thinkingBudget: 1024 },
+};
 
 async function callLLMReal(type, context, userId) {
   return breaker.execute(async () => {
     const sanitizedContext = sanitizeContext(context);
     const systemPrompt = loadSystemPrompt();
     const userPrompt = `Type: ${type}\nContext: ${JSON.stringify(sanitizedContext)}`;
-
     const start = Date.now();
 
     try {
-      const result = await model.generateContent([systemPrompt, userPrompt]);
-      const durationMs = Date.now() - start;
-      const text = result.response.text();
+      const response = await client.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: userPrompt,
+        config: {
+          systemInstruction: systemPrompt,
+          ...sharedConfig,
+        },
+      });
 
-      const tokenCount = result.response.usageMetadata?.totalTokenCount || 0;
+      const durationMs = Date.now() - start;
+      const text = response.text || '';
+      const tokenCount = response.usageMetadata?.totalTokenCount || 0;
+
       if (userId && tokenCount > 0) {
         await Profiles.incrementTokenCount(userId, tokenCount);
       }
-
-      const tokenUsage = {
-        input_tokens: result.response.usageMetadata?.promptTokenCount || 0,
-        output_tokens: result.response.usageMetadata?.candidatesTokenCount || 0,
-      };
 
       aiRequestCount.inc({ type, status: 'success' });
       logger.info({
         action: 'llm_call',
         type,
         duration_ms: durationMs,
-        ...tokenUsage,
+        input_tokens: response.usageMetadata?.promptTokenCount || 0,
+        output_tokens: response.usageMetadata?.candidatesTokenCount || 0,
       });
 
       return { text, tokenCount };
@@ -84,7 +86,7 @@ async function callLLMReal(type, context, userId) {
       });
 
       if (
-        err instanceof GoogleGenerativeAIFetchError &&
+        err instanceof ApiError &&
         (err.status === 429 || err.status === 503)
       ) {
         throw new ServiceUnavailableError('Model AI sedang sibuk, silakan coba lagi');
@@ -93,6 +95,73 @@ async function callLLMReal(type, context, userId) {
       throw err;
     }
   });
+}
+
+async function callLLMStream(type, context, userId) {
+  const sanitizedContext = sanitizeContext(context);
+  const systemPrompt = loadSystemPrompt();
+  const userPrompt = `Type: ${type}\nContext: ${JSON.stringify(sanitizedContext)}`;
+  const start = Date.now();
+
+  try {
+    const stream = await client.models.generateContentStream({
+      model: 'gemini-2.5-flash',
+      contents: userPrompt,
+      config: {
+        systemInstruction: systemPrompt,
+        ...sharedConfig,
+      },
+    });
+
+    let resolveDone;
+    const donePromise = new Promise((resolve) => { resolveDone = resolve; });
+
+    async function* iterate() {
+      let lastUsage;
+      for await (const chunk of stream) {
+        const text = chunk.text;
+        if (text) yield text;
+        lastUsage = chunk.usageMetadata;
+      }
+
+      const durationMs = Date.now() - start;
+      const tokenCount = lastUsage?.totalTokenCount || 0;
+
+      if (userId && tokenCount > 0) {
+        await Profiles.incrementTokenCount(userId, tokenCount);
+      }
+
+      aiRequestCount.inc({ type, status: 'success' });
+      logger.info({
+        action: 'llm_stream',
+        type,
+        duration_ms: durationMs,
+        input_tokens: lastUsage?.promptTokenCount || 0,
+        output_tokens: lastUsage?.candidatesTokenCount || 0,
+      });
+
+      resolveDone({ tokenCount });
+    }
+
+    return { chunks: iterate(), done: donePromise };
+  } catch (err) {
+    aiRequestCount.inc({ type, status: 'error' });
+    logger.error({
+      action: 'llm_stream_error',
+      type,
+      error_message: err.message,
+      duration_ms: Date.now() - start,
+    });
+
+    if (
+      err instanceof ApiError &&
+      (err.status === 429 || err.status === 503)
+    ) {
+      throw new ServiceUnavailableError('Model AI sedang sibuk, silakan coba lagi');
+    }
+
+    throw err;
+  }
 }
 
 async function callLLMMock(type, context, userId) {
@@ -118,4 +187,4 @@ async function callLLMMock(type, context, userId) {
 
 const callLLM = config.llmProvider === 'mock' ? callLLMMock : callLLMReal;
 
-module.exports = { callLLM, validateAIOutput };
+module.exports = { callLLM, callLLMStream, validateAIOutput };

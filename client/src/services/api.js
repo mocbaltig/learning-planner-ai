@@ -82,6 +82,71 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
+/* ── SSE streaming helper ── */
+
+export function streamSSE(path, body, callbacks) {
+  const { onTask, onSummary, onDone, onError } = callbacks;
+  const token = localStorage.getItem('token');
+  let aborted = false;
+  let reader = null;
+
+  (async () => {
+    try {
+      const res = await fetch(`${BASE_URL}${path}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        let msg;
+        try { const b = await res.json(); msg = b.error; } catch { msg = res.statusText; }
+        onError?.({ code: 'HTTP_ERROR', message: msg || 'Request gagal' });
+        return;
+      }
+
+      reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let currentEvent = null;
+      let currentData = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (aborted) { reader.cancel(); return; }
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            currentEvent = line.slice(7).trim();
+          } else if (line.startsWith('data: ')) {
+            currentData = line.slice(6);
+          } else if (line === '' && currentEvent && currentData) {
+            const payload = JSON.parse(currentData);
+            if (currentEvent === 'task') onTask?.(payload);
+            else if (currentEvent === 'summary') onSummary?.(payload);
+            else if (currentEvent === 'done') onDone?.(payload);
+            else if (currentEvent === 'error') onError?.(payload);
+            currentEvent = null;
+            currentData = '';
+          }
+        }
+      }
+    } catch (err) {
+      if (!aborted) onError?.({ code: 'STREAM_ERROR', message: err.message });
+    }
+  })();
+
+  return () => { aborted = true; if (reader) reader.cancel(); };
+}
+
 export const api = {
   get: (path) => request(path),
   post: (path, body) =>
