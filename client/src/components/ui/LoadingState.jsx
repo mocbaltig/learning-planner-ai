@@ -1,4 +1,23 @@
-export default function LoadingState({ variant = 'card', count = 1, message }) {
+import { useState, useEffect } from 'react';
+
+export default function LoadingState({ variant = 'card', count = 1, message, stages }) {
+  const [stageIndex, setStageIndex] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!stages?.length) return;
+    const interval = setInterval(() => {
+      setStageIndex((prev) => (prev + 1) % stages.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [stages?.length]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
   if (variant === 'spinner') {
     return (
       <div className='flex flex-col items-center justify-center py-12 gap-3' role='status' aria-live='polite'>
@@ -43,18 +62,26 @@ export default function LoadingState({ variant = 'card', count = 1, message }) {
   }
 
   return (
-    <div className='space-y-4 animate-pulse' aria-busy='true' aria-label={message || 'Memuat...'} aria-live='polite' role='region'>
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className='bg-[#0f172a] border border-white/5 rounded-2xl p-5 space-y-3'>
-          <div className='h-4 bg-white/5 rounded-full w-3/4' />
-          <div className='h-3 bg-white/5 rounded-full w-full' />
-          <div className='h-3 bg-white/5 rounded-full w-4/5' />
-          <div className='flex gap-2 mt-4'>
-            <div className='h-8 w-24 bg-white/5 rounded-xl' />
-            <div className='h-8 w-24 bg-white/5 rounded-xl' />
+    <div aria-busy='true' aria-label={message || 'Memuat...'} aria-live='polite' role='region' className='space-y-4'>
+      <div className='space-y-4 animate-pulse'>
+        {Array.from({ length: count }).map((_, i) => (
+          <div key={i} className='bg-[#0f172a] border border-white/5 rounded-2xl p-5 space-y-3'>
+            <div className='h-4 bg-white/5 rounded-full w-3/4' />
+            <div className='h-3 bg-white/5 rounded-full w-full' />
+            <div className='h-3 bg-white/5 rounded-full w-4/5' />
+            <div className='flex gap-2 mt-4'>
+              <div className='h-8 w-24 bg-white/5 rounded-xl' />
+              <div className='h-8 w-24 bg-white/5 rounded-xl' />
+            </div>
           </div>
+        ))}
+      </div>
+      {stages?.length > 0 && (
+        <div className='flex flex-col items-center gap-1.5 py-2'>
+          <p className='text-xs text-slate-400'>{stages[stageIndex]}</p>
+          <p className='text-xs text-slate-500 tabular-nums'>{elapsed}s</p>
         </div>
-      ))}
+      )}
     </div>
   );
 }

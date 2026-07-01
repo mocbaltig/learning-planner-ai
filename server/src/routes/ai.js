@@ -6,8 +6,10 @@ const { validate } = require('../middleware/validate');
 const { clientSuggestPayloadSchema, reschedulePayloadSchema } = require('../validator/ai-schema');
 const {
   createSuggestion,
+  createSuggestionStream,
   editRecommendationById,
   reschedule,
+  rescheduleStream,
   getTokenUsage,
 } = require('../controller/ai');
 
@@ -23,6 +25,20 @@ router.post(
   authenticate,
   validate(reschedulePayloadSchema),
   reschedule,
+);
+
+router.post(
+  '/plan/suggest/stream',
+  authenticate,
+  validate(clientSuggestPayloadSchema),
+  createSuggestionStream,
+);
+
+router.post(
+  '/plan/reschedule/stream',
+  authenticate,
+  validate(reschedulePayloadSchema),
+  rescheduleStream,
 );
 
 router.patch('/recommendations/:id', authenticate, editRecommendationById);

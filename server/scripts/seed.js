@@ -7,9 +7,9 @@ const {
   getWeekString,
 } = require('../src/utils/week');
 
-const SEED_EMAIL = 'user_seed@mail.com';
-const SEED_PASSWORD = 'seed1234';
-const ADMIN_EMAIL = 'admin_seed@mail.com';
+const SEED_EMAIL = 'budi@mail.com';
+const SEED_PASSWORD = 'budi1234';
+const ADMIN_EMAIL = 'admin@mail.com';
 const ADMIN_PASSWORD = 'admin1234';
 
 async function cleanupUser(email) {
@@ -193,7 +193,7 @@ async function seed() {
 
   const recSuggestLast = await db.query(
     `INSERT INTO ai_recommendations (user_id, type, input_context, output, status, token_count)
-     VALUES ($1, 'suggest', $2, $3, 'accepted', 421) RETURNING id`,
+     VALUES ($1, 'suggest', $2, $3, 'accepted', 0) RETURNING id`,
     [userId, JSON.stringify(suggestLastCtx), JSON.stringify(suggestLastOutput)],
   );
   const recSuggestLastId = recSuggestLast.rows[0].id;
@@ -273,7 +273,7 @@ async function seed() {
 
   const recSuggestThis = await db.query(
     `INSERT INTO ai_recommendations (user_id, type, input_context, output, status, token_count)
-     VALUES ($1, 'suggest', $2, $3, 'accepted', 452) RETURNING id`,
+     VALUES ($1, 'suggest', $2, $3, 'accepted', 0) RETURNING id`,
     [userId, JSON.stringify(suggestThisCtx), JSON.stringify(suggestThisOutput)],
   );
   const recSuggestThisId = recSuggestThis.rows[0].id;
@@ -316,7 +316,7 @@ async function seed() {
 
   const recSuggestNext = await db.query(
     `INSERT INTO ai_recommendations (user_id, type, input_context, output, status, token_count)
-     VALUES ($1, 'suggest', $2, $3, 'pending', 315) RETURNING id`,
+     VALUES ($1, 'suggest', $2, $3, 'pending', 0) RETURNING id`,
     [userId, JSON.stringify(suggestNextCtx), JSON.stringify(suggestNextOutput)],
   );
   const recSuggestNextId = recSuggestNext.rows[0].id;
@@ -389,7 +389,7 @@ async function seed() {
 
   const recReschedule = await db.query(
     `INSERT INTO ai_recommendations (user_id, type, input_context, output, status, token_count)
-     VALUES ($1, 'reschedule', $2, $3, 'accepted', 387) RETURNING id`,
+     VALUES ($1, 'reschedule', $2, $3, 'accepted', 0) RETURNING id`,
     [userId, JSON.stringify(rescheduleCtx), JSON.stringify(rescheduleOutput)],
   );
   const recRescheduleId = recReschedule.rows[0].id;
