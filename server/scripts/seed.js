@@ -55,6 +55,15 @@ async function seed() {
   const sat = addDays(mon, 5);
   const sun = addDays(mon, 6);
 
+  // Two weeks ago
+  const last2Mon = addDays(mon, -14);
+  const last2Tue = addDays(mon, -13);
+  const last2Wed = addDays(mon, -12);
+  const last2Thu = addDays(mon, -11);
+  const last2Fri = addDays(mon, -10);
+  const last2Sat = addDays(mon, -9);
+  const last2Sun = addDays(mon, -8);
+
   // Last week
   const lastMon = addDays(mon, -7);
   const lastTue = addDays(mon, -6);
@@ -73,8 +82,19 @@ async function seed() {
   const nextSat = addDays(mon, 12);
   const nextSun = addDays(mon, 13);
 
+  // Two weeks from now
+  const next2Mon = addDays(mon, 14);
+  const next2Tue = addDays(mon, 15);
+  const next2Wed = addDays(mon, 16);
+  const next2Thu = addDays(mon, 17);
+  const next2Fri = addDays(mon, 18);
+  const next2Sat = addDays(mon, 19);
+  const next2Sun = addDays(mon, 20);
+
+  const last2WeekStr = getWeekString(new Date(last2Mon));
   const lastWeekStr = getWeekString(new Date(lastMon));
   const nextWeekStr = getWeekString(new Date(nextMon));
+  const next2WeekStr = getWeekString(new Date(next2Mon));
 
   // 1. Create user
   const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
@@ -117,21 +137,113 @@ async function seed() {
   // 3. Create goals
   const goal1Res = await db.query(
     "INSERT INTO goals (user_id, title, description, deadline) VALUES ($1, 'Belajar React Dasar', 'Memahami fundamental React: komponen, props, state, dan hooks', $2) RETURNING id",
-    [userId, sun],
+    [userId, addDays(mon, 21)],
   );
   const goal1Id = goal1Res.rows[0].id;
 
   const goal2Res = await db.query(
-    "INSERT INTO goals (user_id, title, description, deadline) VALUES ($1, 'Menyelesaikan Proyek Capstone', 'Membangun aplikasi web perencanaan belajar berbasis AI', $2) RETURNING id",
-    [userId, addDays(mon, 14)],
+    "INSERT INTO goals (user_id, title, description, deadline) VALUES ($1, 'Latihan Calisthenics', 'Rutin calisthenics: push-up, pull-up, squat, plank, L-sit, dan handstand', $2) RETURNING id",
+    [userId, addDays(mon, 28)],
   );
   const goal2Id = goal2Res.rows[0].id;
+
+  const goal3Res = await db.query(
+    "INSERT INTO goals (user_id, title, description, deadline) VALUES ($1, 'Belajar Main Gitar', 'Belajar chord dasar, strumming, melodi sederhana, dan lagu pop', $2) RETURNING id",
+    [userId, addDays(mon, 28)],
+  );
+  const goal3Id = goal3Res.rows[0].id;
   console.log('3. Goals created');
 
   // 4. Create AI recommendations
 
-  // --- Recommendation: suggest for last week (Goal 1) ---
-  const suggestLastOutput = {
+  const profileAvail = {
+    monday: ['morning', 'afternoon', 'evening'],
+    tuesday: ['morning', 'afternoon'],
+    wednesday: ['morning', 'afternoon', 'evening'],
+    thursday: ['morning', 'afternoon'],
+    friday: ['morning'],
+    saturday: ['morning'],
+    sunday: [],
+  };
+
+  // --- Recommendation 1: suggest for week -2 (Goal 1 + Goal 2) ---
+  const suggestWk2Output = {
+    tasks: [
+      {
+        title: 'Pengenalan Web Development',
+        description: 'Pelajari dasar-dasar web: HTML, CSS, dan cara browser bekerja',
+        duration_estimate: 30,
+        planned_date: last2Mon,
+        planned_slot: 'morning',
+        rationale: 'Fundamental sebelum belajar React',
+      },
+      {
+        title: 'Setup VS Code & Tools',
+        description: 'Install dan konfigurasi VS Code, Node.js, dan Git',
+        duration_estimate: 30,
+        planned_date: last2Tue,
+        planned_slot: 'morning',
+        rationale: 'Persiapan environment development',
+      },
+      {
+        title: 'Latihan Push-Up Dasar 3x10',
+        description: 'Latihan push-up 3 set x 10 repetisi dengan form yang benar',
+        duration_estimate: 30,
+        planned_date: last2Wed,
+        planned_slot: 'morning',
+        rationale: 'Gerakan calisthenics dasar untuk kekuatan dada dan lengan',
+      },
+      {
+        title: 'Mengenal Bagian & Stem Gitar',
+        description: 'Pelajari bagian-bagian gitar dan cara menyetem senar',
+        duration_estimate: 30,
+        planned_date: last2Thu,
+        planned_slot: 'afternoon',
+        rationale: 'Pengenalan alat musik sebelum belajar chord',
+      },
+      {
+        title: 'Latihan Pull-Up Gantung 3x5',
+        description: 'Latihan pull-up bantuan karet 3 set x 5 repetisi',
+        duration_estimate: 25,
+        planned_date: last2Fri,
+        planned_slot: 'morning',
+        rationale: 'Melatih kekuatan punggung dan lengan',
+      },
+    ],
+    summary:
+      'Fokus minggu pertama: pengenalan web, calisthenics dasar, dan pengenalan gitar',
+  };
+
+  const suggestWk2Ctx = {
+    week_start: last2Mon,
+    week_end: last2Sun,
+    goals: [
+      {
+        title: 'Belajar React Dasar',
+        description: 'Memahami fundamental React: komponen, props, state, dan hooks',
+        deadline: addDays(mon, 21),
+      },
+      {
+        title: 'Latihan Calisthenics',
+        description:
+          'Rutin calisthenics: push-up, pull-up, squat, plank, L-sit, dan handstand',
+        deadline: addDays(mon, 28),
+      },
+    ],
+    weekly_target_hours: 6,
+    preferred_time: 'morning',
+    existing_tasks: [],
+  };
+
+  const recWk2 = await db.query(
+    `INSERT INTO ai_recommendations (user_id, type, input_context, output, status, token_count)
+     VALUES ($1, 'suggest', $2, $3, 'accepted', 0) RETURNING id`,
+    [userId, JSON.stringify(suggestWk2Ctx), JSON.stringify(suggestWk2Output)],
+  );
+  const recWk2Id = recWk2.rows[0].id;
+
+  // --- Recommendation 2: suggest for week -1 (Goal 1 + Goal 2 + Goal 3) ---
+  const suggestWk1Output = {
     tasks: [
       {
         title: 'Pengenalan React & Virtual DOM',
@@ -173,33 +285,82 @@ async function seed() {
         planned_slot: 'morning',
         rationale: 'Memperkuat teori dengan sumber resmi',
       },
+      {
+        title: 'Latihan Squat Dasar 3x15',
+        description: 'Latihan squat bodyweight 3 set x 15 repetisi',
+        duration_estimate: 30,
+        planned_date: lastMon,
+        planned_slot: 'afternoon',
+        rationale: 'Gerakan calisthenics untuk kekuatan kaki',
+      },
+      {
+        title: 'Latihan Plank 30 Detik 3x',
+        description: 'Tahan plank selama 30 detik, 3 set dengan istirahat 30 detik',
+        duration_estimate: 25,
+        planned_date: lastWed,
+        planned_slot: 'afternoon',
+        rationale: 'Perkuat core dan stabilitas tubuh',
+      },
+      {
+        title: 'Belajar Chord A, D, E',
+        description: 'Pelajari posisi jari untuk chord A, D, dan E mayor',
+        duration_estimate: 30,
+        planned_date: lastTue,
+        planned_slot: 'afternoon',
+        rationale: 'Chord dasar yang paling sering digunakan',
+      },
+      {
+        title: 'Latihan Perpindahan Chord A-D-E',
+        description: 'Latihan berpindah antar chord A, D, E secara cepat',
+        duration_estimate: 30,
+        planned_date: lastThu,
+        planned_slot: 'morning',
+        rationale: 'Melatih muscle memory perpindahan chord',
+      },
     ],
     summary:
-      'Fokus pada dasar React: Virtual DOM, komponen, props, dan environment setup',
+      'Fokus pada React dasar, calisthenics kekuatan kaki & core, serta chord dasar gitar',
   };
 
-  const suggestLastCtx = {
+  const suggestWk1Ctx = {
     week_start: lastMon,
     week_end: lastSun,
-    goal: {
-      title: 'Belajar React Dasar',
-      description: 'Memahami fundamental React: komponen, props, state, dan hooks',
-      deadline: sun,
-    },
+    goals: [
+      {
+        title: 'Belajar React Dasar',
+        description: 'Memahami fundamental React: komponen, props, state, dan hooks',
+        deadline: addDays(mon, 21),
+      },
+      {
+        title: 'Latihan Calisthenics',
+        description:
+          'Rutin calisthenics: push-up, pull-up, squat, plank, L-sit, dan handstand',
+        deadline: addDays(mon, 28),
+      },
+      {
+        title: 'Belajar Main Gitar',
+        description: 'Belajar chord dasar, strumming, melodi sederhana, dan lagu pop',
+        deadline: addDays(mon, 28),
+      },
+    ],
     weekly_target_hours: 8,
     preferred_time: 'morning',
-    existing_tasks: [],
+    existing_tasks: suggestWk2Output.tasks.slice(0, 2).map((t) => ({
+      title: t.title,
+      planned_date: t.planned_date,
+      planned_slot: t.planned_slot,
+    })),
   };
 
-  const recSuggestLast = await db.query(
+  const recWk1 = await db.query(
     `INSERT INTO ai_recommendations (user_id, type, input_context, output, status, token_count)
      VALUES ($1, 'suggest', $2, $3, 'accepted', 0) RETURNING id`,
-    [userId, JSON.stringify(suggestLastCtx), JSON.stringify(suggestLastOutput)],
+    [userId, JSON.stringify(suggestWk1Ctx), JSON.stringify(suggestWk1Output)],
   );
-  const recSuggestLastId = recSuggestLast.rows[0].id;
+  const recWk1Id = recWk1.rows[0].id;
 
-  // --- Recommendation: suggest for this week (Goal 1) ---
-  const suggestThisOutput = {
+  // --- Recommendation 3: suggest for week 0 (Goal 1 + Goal 3) ---
+  const suggestWk0Output = {
     tasks: [
       {
         title: 'Memahami JSX dan Component',
@@ -249,37 +410,60 @@ async function seed() {
         planned_slot: 'afternoon',
         rationale: 'Kasus nyata penggunaan useEffect',
       },
+      {
+        title: 'Belajar Chord C, G, F',
+        description: 'Pelajari posisi jari untuk chord C, G, dan F mayor',
+        duration_estimate: 30,
+        planned_date: wed,
+        planned_slot: 'morning',
+        rationale: 'Chord penting setelah A, D, E',
+      },
+      {
+        title: 'Latihan Strumming Dasar',
+        description: 'Latihan pola strumming down-up dengan tempo lambat',
+        duration_estimate: 30,
+        planned_date: sat,
+        planned_slot: 'morning',
+        rationale: 'Teknik strumming fundamental untuk iringan lagu',
+      },
     ],
     summary:
-      'Fokus minggu ini pada penguasaan dasar React: JSX, component, props, state, dan efek samping',
+      'Minggu ini fokus pada React state & lifecycle, dan lanjutan chord gitar C-G-F',
   };
 
-  const suggestThisCtx = {
+  const suggestWk0Ctx = {
     week_start: weekStart,
     week_end: weekEnd,
-    goal: {
-      title: 'Belajar React Dasar',
-      description: 'Memahami fundamental React: komponen, props, state, dan hooks',
-      deadline: sun,
-    },
+    goals: [
+      {
+        title: 'Belajar React Dasar',
+        description: 'Memahami fundamental React: komponen, props, state, dan hooks',
+        deadline: addDays(mon, 21),
+      },
+      {
+        title: 'Belajar Main Gitar',
+        description: 'Belajar chord dasar, strumming, melodi sederhana, dan lagu pop',
+        deadline: addDays(mon, 28),
+      },
+    ],
     weekly_target_hours: 8,
     preferred_time: 'morning',
-    existing_tasks: suggestLastOutput.tasks.slice(0, 2).map((t) => ({
+    existing_tasks: suggestWk1Output.tasks.slice(0, 3).map((t) => ({
       title: t.title,
       planned_date: t.planned_date,
       planned_slot: t.planned_slot,
     })),
   };
 
-  const recSuggestThis = await db.query(
+  const recWk0 = await db.query(
     `INSERT INTO ai_recommendations (user_id, type, input_context, output, status, token_count)
      VALUES ($1, 'suggest', $2, $3, 'accepted', 0) RETURNING id`,
-    [userId, JSON.stringify(suggestThisCtx), JSON.stringify(suggestThisOutput)],
+    [userId, JSON.stringify(suggestWk0Ctx), JSON.stringify(suggestWk0Output)],
   );
-  const recSuggestThisId = recSuggestThis.rows[0].id;
+  const recWk0Id = recWk0.rows[0].id;
 
-  // --- Recommendation: suggest for next week (Goal 1 + Goal 2) ---
-  const suggestNextOutput = {
+  // --- Recommendation 4: suggest for week +1 (Goal 1 + Goal 2) ---
+  const suggestWkPlus1Output = {
     tasks: [
       {
         title: 'Belajar React Router Dasar',
@@ -297,107 +481,225 @@ async function seed() {
         planned_slot: 'afternoon',
         rationale: 'Praktik langsung setelah paham konsep routing',
       },
+      {
+        title: 'Latihan Dips Kursi 3x8',
+        description: 'Latihan dips menggunakan kursi 3 set x 8 repetisi',
+        duration_estimate: 30,
+        planned_date: nextTue,
+        planned_slot: 'morning',
+        rationale: 'Melatih triceps dan dada bagian bawah',
+      },
+      {
+        title: 'Latihan Handstand Wall Hold',
+        description: 'Latihan handstand dengan bantuan tembok, tahan 20 detik',
+        duration_estimate: 25,
+        planned_date: nextThu,
+        planned_slot: 'morning',
+        rationale: 'Keseimbangan dan kekuatan bahu',
+      },
+      {
+        title: 'Belajar Chord Minor Am, Dm, Em',
+        description: 'Pelajari chord minor dasar: Am, Dm, dan Em',
+        duration_estimate: 30,
+        planned_date: nextFri,
+        planned_slot: 'morning',
+        rationale: 'Chord minor untuk variasi lagu',
+      },
+      {
+        title: 'Latihan Perpindahan Mayor-Minor',
+        description: 'Latihan perpindahan chord mayor ke minor dan sebaliknya',
+        duration_estimate: 30,
+        planned_date: nextSat,
+        planned_slot: 'morning',
+        rationale: 'Memperlancar transisi chord',
+      },
     ],
-    summary: 'Minggu depan fokus pada React Router untuk navigasi aplikasi',
+    summary:
+      'Minggu depan fokus pada React Router, calisthenics upper body, dan chord minor',
   };
 
-  const suggestNextCtx = {
+  const suggestWkPlus1Ctx = {
     week_start: nextMon,
     week_end: nextSun,
-    goal: {
-      title: 'Belajar React Dasar',
-      description: 'Memahami fundamental React: komponen, props, state, dan hooks',
-      deadline: sun,
-    },
+    goals: [
+      {
+        title: 'Belajar React Dasar',
+        description: 'Memahami fundamental React: komponen, props, state, dan hooks',
+        deadline: addDays(mon, 21),
+      },
+      {
+        title: 'Latihan Calisthenics',
+        description:
+          'Rutin calisthenics: push-up, pull-up, squat, plank, L-sit, dan handstand',
+        deadline: addDays(mon, 28),
+      },
+    ],
     weekly_target_hours: 8,
     preferred_time: 'morning',
     existing_tasks: [],
   };
 
-  const recSuggestNext = await db.query(
+  const recWkPlus1 = await db.query(
     `INSERT INTO ai_recommendations (user_id, type, input_context, output, status, token_count)
      VALUES ($1, 'suggest', $2, $3, 'pending', 0) RETURNING id`,
-    [userId, JSON.stringify(suggestNextCtx), JSON.stringify(suggestNextOutput)],
+    [userId, JSON.stringify(suggestWkPlus1Ctx), JSON.stringify(suggestWkPlus1Output)],
   );
-  const recSuggestNextId = recSuggestNext.rows[0].id;
+  const recWkPlus1Id = recWkPlus1.rows[0].id;
 
-  // --- Recommendation: reschedule (for last week's overdue tasks) ---
-  const rescheduleOutput = {
+  // --- Recommendation 5: suggest for week +2 (Goal 2 + Goal 3) ---
+  const suggestWkPlus2Output = {
     tasks: [
       {
-        title: 'Membuat Komponen Fungsional Pertama',
-        duration_estimate: 45,
-        planned_date: wed,
+        title: 'Full Body Routine: Push-Pull-Legs',
+        description: 'Rangkaian calisthenics push (dips), pull (pull-up), legs (squat)',
+        duration_estimate: 30,
+        planned_date: next2Mon,
+        planned_slot: 'morning',
+        rationale: 'Rutinitas full body untuk kekuatan menyeluruh',
+      },
+      {
+        title: 'Latihan L-Sit di Lantai',
+        description: 'Latihan L-sit tahan 10 detik, 3 set',
+        duration_estimate: 30,
+        planned_date: next2Wed,
         planned_slot: 'afternoon',
-        rationale:
-          'Materi dasar yang terlewat, pindah ke Rabu sore karena slot masih kosong',
+        rationale: 'Melatih core dan kompresi perut',
       },
       {
-        title: 'Latihan Props & Children',
-        duration_estimate: 60,
-        planned_date: thu,
+        title: 'Tes Kemampuan Push-Up Max',
+        description: 'Tes push-up maksimal dalam 1 set tanpa berhenti',
+        duration_estimate: 25,
+        planned_date: next2Fri,
         planned_slot: 'morning',
-        rationale:
-          'Latihan props bisa digabung dengan praktik component list hari Kamis pagi',
+        rationale: 'Mengukur progres kekuatan',
       },
       {
-        title: 'Membaca Dokumentasi Resmi React',
+        title: 'Belajar Melodi Dasar',
+        description: 'Pelajari tangga nada C mayor dan melodi sederhana',
         duration_estimate: 30,
-        planned_date: fri,
+        planned_date: next2Tue,
+        planned_slot: 'afternoon',
+        rationale: 'Dasar melodi sebelum fingerstyle',
+      },
+      {
+        title: 'Latihan Fingerstyle Sederhana',
+        description: 'Latihan pola fingerstyle dasar dengan chord C-G-F',
+        duration_estimate: 30,
+        planned_date: next2Thu,
         planned_slot: 'morning',
-        rationale: 'Dokumentasi bisa dibaca sambil istirahat, durasi singkat 30 menit',
+        rationale: 'Teknik fingerstyle untuk iringan lagu yang lebih variatif',
+      },
+      {
+        title: 'Main Lagu Sederhana',
+        description: 'Mainkan lagu pop sederhana menggunakan chord dan strumming',
+        duration_estimate: 30,
+        planned_date: next2Sat,
+        planned_slot: 'morning',
+        rationale: 'Praktik langsung dengan lagu nyata',
       },
     ],
-    summary:
-      '3 task overdue dari minggu lalu dijadwalkan ulang ke slot kosong minggu ini',
+    summary: 'Dua minggu lagi fokus pada full body calisthenics dan melodi gitar',
   };
 
-  const rescheduleCtx = {
-    overdue_tasks: [
+  const suggestWkPlus2Ctx = {
+    week_start: next2Mon,
+    week_end: next2Sun,
+    goals: [
       {
-        title: 'Membuat Komponen Fungsional Pertama',
-        duration_estimate: 45,
-        original_date: lastWed,
+        title: 'Latihan Calisthenics',
+        description:
+          'Rutin calisthenics: push-up, pull-up, squat, plank, L-sit, dan handstand',
+        deadline: addDays(mon, 28),
       },
       {
-        title: 'Latihan Props & Children',
-        duration_estimate: 60,
-        original_date: lastThu,
-      },
-      {
-        title: 'Membaca Dokumentasi Resmi React',
-        duration_estimate: 30,
-        original_date: lastFri,
+        title: 'Belajar Main Gitar',
+        description: 'Belajar chord dasar, strumming, melodi sederhana, dan lagu pop',
+        deadline: addDays(mon, 28),
       },
     ],
-    current_week_tasks: suggestThisOutput.tasks.slice(0, 3).map((t) => ({
-      planned_date: t.planned_date,
-      planned_slot: t.planned_slot,
-      duration_estimate: t.duration_estimate,
-    })),
-    availability: {
-      monday: ['morning', 'afternoon', 'evening'],
-      tuesday: ['morning', 'afternoon'],
-      wednesday: ['morning', 'afternoon', 'evening'],
-      thursday: ['morning', 'afternoon'],
-      friday: ['morning'],
-      saturday: ['morning'],
-      sunday: [],
-    },
-    remaining_capacity: 3.75,
+    weekly_target_hours: 6,
+    preferred_time: 'morning',
+    existing_tasks: [],
   };
 
-  const recReschedule = await db.query(
+  const recWkPlus2 = await db.query(
     `INSERT INTO ai_recommendations (user_id, type, input_context, output, status, token_count)
-     VALUES ($1, 'reschedule', $2, $3, 'accepted', 0) RETURNING id`,
-    [userId, JSON.stringify(rescheduleCtx), JSON.stringify(rescheduleOutput)],
+     VALUES ($1, 'suggest', $2, $3, 'pending', 0) RETURNING id`,
+    [userId, JSON.stringify(suggestWkPlus2Ctx), JSON.stringify(suggestWkPlus2Output)],
   );
-  const recRescheduleId = recReschedule.rows[0].id;
+  const recWkPlus2Id = recWkPlus2.rows[0].id;
   console.log('4. AI recommendations created');
 
   // 5. Create tasks
   const tasksData = [
-    // ── LAST WEEK tasks (Goal 1) ──
+    // ── WEEK -2: tasks (Goal 1 + Goal 2) ──
+    {
+      goal_id: goal1Id,
+      title: 'Pengenalan Web Development',
+      description: 'Pelajari dasar-dasar web: HTML, CSS, dan cara browser bekerja',
+      duration_estimate: 30,
+      planned_date: last2Mon,
+      planned_slot: 'morning',
+      status: 'done',
+      source: 'ai',
+      actual_duration: 35,
+      completed_at: `${last2Mon}T10:00:00+07:00`,
+      rationale: 'Paham konsep dasar web development',
+    },
+    {
+      goal_id: goal1Id,
+      title: 'Setup VS Code & Tools',
+      description: 'Install dan konfigurasi VS Code, Node.js, dan Git',
+      duration_estimate: 30,
+      planned_date: last2Tue,
+      planned_slot: 'morning',
+      status: 'done',
+      source: 'ai',
+      actual_duration: 25,
+      completed_at: `${last2Tue}T09:30:00+07:00`,
+      rationale: 'Environment siap digunakan',
+    },
+    {
+      goal_id: goal2Id,
+      title: 'Latihan Push-Up Dasar 3x10',
+      description: 'Latihan push-up 3 set x 10 repetisi dengan form yang benar',
+      duration_estimate: 30,
+      planned_date: last2Wed,
+      planned_slot: 'morning',
+      status: 'done',
+      source: 'ai',
+      actual_duration: 30,
+      completed_at: `${last2Wed}T07:00:00+07:00`,
+      rationale: 'Form push-up sudah mulai benar',
+    },
+    {
+      goal_id: goal3Id,
+      title: 'Mengenal Bagian & Stem Gitar',
+      description: 'Pelajari bagian-bagian gitar dan cara menyetem senar',
+      duration_estimate: 30,
+      planned_date: last2Thu,
+      planned_slot: 'afternoon',
+      status: 'done',
+      source: 'ai',
+      actual_duration: 35,
+      completed_at: `${last2Thu}T16:00:00+07:00`,
+      rationale: 'Sudah bisa menyetem gitar sendiri',
+    },
+    {
+      goal_id: goal2Id,
+      title: 'Latihan Pull-Up Gantung 3x5',
+      description: 'Latihan pull-up bantuan karet 3 set x 5 repetisi',
+      duration_estimate: 25,
+      planned_date: last2Fri,
+      planned_slot: 'morning',
+      status: 'done',
+      source: 'ai',
+      actual_duration: 25,
+      completed_at: `${last2Fri}T07:15:00+07:00`,
+      rationale: 'Mulai terbiasa dengan gerakan pull-up',
+    },
+
+    // ── WEEK -1: tasks (Goal 1 + Goal 2 + Goal 3) ──
     {
       goal_id: goal1Id,
       title: 'Pengenalan React & Virtual DOM',
@@ -424,8 +726,6 @@ async function seed() {
       completed_at: `${lastTue}T09:30:00+07:00`,
       rationale: 'Berhasil setup Vite + React',
     },
-
-    // ── LAST WEEK overdue tasks (Goal 1) — status: todo, planned_date IN THE PAST ──
     {
       goal_id: goal1Id,
       title: 'Membuat Komponen Fungsional Pertama',
@@ -459,21 +759,58 @@ async function seed() {
       source: 'manual',
       rationale: 'Membaca dokumentasi, bisa dilakukan kapan saja',
     },
-
-    // ── LAST WEEK overdue task (Goal 2) ──
     {
       goal_id: goal2Id,
-      title: 'Analisis Kebutuhan Capstone',
-      description: 'Identifikasi fitur dan kebutuhan aplikasi capstone',
-      duration_estimate: 60,
+      title: 'Latihan Squat Dasar 3x15',
+      description: 'Latihan squat bodyweight 3 set x 15 repetisi',
+      duration_estimate: 30,
+      planned_date: lastMon,
+      planned_slot: 'afternoon',
+      status: 'done',
+      source: 'ai',
+      actual_duration: 30,
+      completed_at: `${lastMon}T17:00:00+07:00`,
+      rationale: 'Form squat sudah baik',
+    },
+    {
+      goal_id: goal2Id,
+      title: 'Latihan Plank 30 Detik 3x',
+      description: 'Tahan plank selama 30 detik, 3 set dengan istirahat 30 detik',
+      duration_estimate: 25,
       planned_date: lastWed,
       planned_slot: 'afternoon',
+      status: 'done',
+      source: 'ai',
+      actual_duration: 25,
+      completed_at: `${lastWed}T16:30:00+07:00`,
+      rationale: 'Core mulai terasa lebih kuat',
+    },
+    {
+      goal_id: goal3Id,
+      title: 'Belajar Chord A, D, E',
+      description: 'Pelajari posisi jari untuk chord A, D, dan E mayor',
+      duration_estimate: 30,
+      planned_date: lastTue,
+      planned_slot: 'afternoon',
+      status: 'done',
+      source: 'ai',
+      actual_duration: 35,
+      completed_at: `${lastTue}T16:30:00+07:00`,
+      rationale: 'Chord A D E sudah bisa dibunyikan bersih',
+    },
+    {
+      goal_id: goal3Id,
+      title: 'Latihan Perpindahan Chord A-D-E',
+      description: 'Latihan berpindah antar chord A, D, E secara cepat',
+      duration_estimate: 30,
+      planned_date: lastThu,
+      planned_slot: 'morning',
       status: 'todo',
-      source: 'manual',
-      rationale: 'Analisis kebutuhan untuk proyek capstone',
+      source: 'ai',
+      rationale: 'Perpindahan masih lambat, perlu latihan lagi',
     },
 
-    // ── THIS WEEK tasks (Goal 1) ──
+    // ── WEEK 0: tasks (Goal 1 + Goal 2 + Goal 3) ──
     {
       goal_id: goal1Id,
       title: 'Memahami JSX dan Component',
@@ -546,8 +883,6 @@ async function seed() {
       source: 'ai',
       rationale: 'Materi lanjutan setelah paham useEffect',
     },
-
-    // ── THIS WEEK manual tasks ──
     {
       goal_id: goal1Id,
       title: 'Review Materi Mingguan',
@@ -562,16 +897,39 @@ async function seed() {
     },
     {
       goal_id: goal2Id,
-      title: 'Diskusi dengan Mentor',
-      description: 'Konsultasi progres proyek capstone dengan mentor',
-      duration_estimate: 45,
+      title: 'Push-Up Variasi Wide & Diamond',
+      description: 'Latihan push-up wide grip dan diamond grip 3x8 masing-masing',
+      duration_estimate: 30,
+      planned_date: tue,
+      planned_slot: 'afternoon',
+      status: 'todo',
+      source: 'ai',
+      rationale: 'Variasi push-up untuk melatih otot berbeda',
+    },
+    {
+      goal_id: goal3Id,
+      title: 'Belajar Chord C, G, F',
+      description: 'Pelajari posisi jari untuk chord C, G, dan F mayor',
+      duration_estimate: 30,
       planned_date: wed,
       planned_slot: 'morning',
       status: 'todo',
-      source: 'manual',
+      source: 'ai',
+      rationale: 'Chord penting setelah A, D, E',
+    },
+    {
+      goal_id: goal3Id,
+      title: 'Latihan Strumming Dasar',
+      description: 'Latihan pola strumming down-up dengan tempo lambat',
+      duration_estimate: 30,
+      planned_date: sat,
+      planned_slot: 'morning',
+      status: 'todo',
+      source: 'ai',
+      rationale: 'Teknik strumming fundamental untuk iringan lagu',
     },
 
-    // ── NEXT WEEK planned tasks (Goal 1) ──
+    // ── WEEK +1: tasks (Goal 1 + Goal 2 + Goal 3) ──
     {
       goal_id: goal1Id,
       title: 'Belajar React Router Dasar',
@@ -594,27 +952,117 @@ async function seed() {
       source: 'ai',
       rationale: 'Praktik langsung setelah paham konsep routing',
     },
-
-    // ── NEXT WEEK planned tasks (Goal 2) ──
     {
       goal_id: goal2Id,
-      title: 'Implementasi Fitur Dashboard',
-      description: 'Membangun halaman dashboard untuk aplikasi capstone',
-      duration_estimate: 60,
+      title: 'Latihan Dips Kursi 3x8',
+      description: 'Latihan dips menggunakan kursi 3 set x 8 repetisi',
+      duration_estimate: 30,
       planned_date: nextTue,
       planned_slot: 'morning',
       status: 'todo',
-      source: 'manual',
+      source: 'ai',
+      rationale: 'Melatih triceps dan dada bagian bawah',
     },
     {
       goal_id: goal2Id,
-      title: 'Integrasi CRUD API Backend',
-      description: 'Menghubungkan frontend dengan backend API untuk CRUD goals',
-      duration_estimate: 90,
+      title: 'Latihan Handstand Wall Hold',
+      description: 'Latihan handstand dengan bantuan tembok, tahan 20 detik',
+      duration_estimate: 25,
       planned_date: nextThu,
       planned_slot: 'morning',
       status: 'todo',
-      source: 'manual',
+      source: 'ai',
+      rationale: 'Keseimbangan dan kekuatan bahu',
+    },
+    {
+      goal_id: goal3Id,
+      title: 'Belajar Chord Minor Am, Dm, Em',
+      description: 'Pelajari chord minor dasar: Am, Dm, dan Em',
+      duration_estimate: 30,
+      planned_date: nextFri,
+      planned_slot: 'morning',
+      status: 'todo',
+      source: 'ai',
+      rationale: 'Chord minor untuk variasi lagu',
+    },
+    {
+      goal_id: goal3Id,
+      title: 'Latihan Perpindahan Mayor-Minor',
+      description: 'Latihan perpindahan chord mayor ke minor dan sebaliknya',
+      duration_estimate: 30,
+      planned_date: nextSat,
+      planned_slot: 'morning',
+      status: 'todo',
+      source: 'ai',
+      rationale: 'Memperlancar transisi chord',
+    },
+
+    // ── WEEK +2: tasks (Goal 2 + Goal 3) ──
+    {
+      goal_id: goal2Id,
+      title: 'Full Body Routine: Push-Pull-Legs',
+      description: 'Rangkaian calisthenics push (dips), pull (pull-up), legs (squat)',
+      duration_estimate: 30,
+      planned_date: next2Mon,
+      planned_slot: 'morning',
+      status: 'todo',
+      source: 'ai',
+      rationale: 'Rutinitas full body untuk kekuatan menyeluruh',
+    },
+    {
+      goal_id: goal2Id,
+      title: 'Latihan L-Sit di Lantai',
+      description: 'Latihan L-sit tahan 10 detik, 3 set',
+      duration_estimate: 30,
+      planned_date: next2Wed,
+      planned_slot: 'afternoon',
+      status: 'todo',
+      source: 'ai',
+      rationale: 'Melatih core dan kompresi perut',
+    },
+    {
+      goal_id: goal2Id,
+      title: 'Tes Kemampuan Push-Up Max',
+      description: 'Tes push-up maksimal dalam 1 set tanpa berhenti',
+      duration_estimate: 25,
+      planned_date: next2Fri,
+      planned_slot: 'morning',
+      status: 'todo',
+      source: 'ai',
+      rationale: 'Mengukur progres kekuatan',
+    },
+    {
+      goal_id: goal3Id,
+      title: 'Belajar Melodi Dasar',
+      description: 'Pelajari tangga nada C mayor dan melodi sederhana',
+      duration_estimate: 30,
+      planned_date: next2Tue,
+      planned_slot: 'afternoon',
+      status: 'todo',
+      source: 'ai',
+      rationale: 'Dasar melodi sebelum fingerstyle',
+    },
+    {
+      goal_id: goal3Id,
+      title: 'Latihan Fingerstyle Sederhana',
+      description: 'Latihan pola fingerstyle dasar dengan chord C-G-F',
+      duration_estimate: 30,
+      planned_date: next2Thu,
+      planned_slot: 'morning',
+      status: 'todo',
+      source: 'ai',
+      rationale: 'Teknik fingerstyle untuk iringan lagu yang lebih variatif',
+    },
+    {
+      goal_id: goal3Id,
+      title: 'Main Lagu Sederhana',
+      description: 'Mainkan lagu pop sederhana menggunakan chord dan strumming',
+      duration_estimate: 30,
+      planned_date: next2Sat,
+      planned_slot: 'morning',
+      status: 'todo',
+      source: 'ai',
+      rationale: 'Praktik langsung dengan lagu nyata',
     },
   ];
 
@@ -655,7 +1103,13 @@ async function seed() {
   // 6. Create progress snapshots
   await db.query(
     `INSERT INTO progress_snapshots (user_id, week, planned_hours, completed_hours, completion_rate)
-     VALUES ($1, $2, 7.0, 2.25, 0.32)`,
+     VALUES ($1, $2, 5.0, 4.5, 0.90)`,
+    [userId, last2WeekStr],
+  );
+
+  await db.query(
+    `INSERT INTO progress_snapshots (user_id, week, planned_hours, completed_hours, completion_rate)
+     VALUES ($1, $2, 7.0, 3.5, 0.50)`,
     [userId, lastWeekStr],
   );
 
@@ -663,6 +1117,12 @@ async function seed() {
     `INSERT INTO progress_snapshots (user_id, week, planned_hours, completed_hours, completion_rate)
      VALUES ($1, $2, 8.0, 3.75, 0.47)`,
     [userId, weekStr],
+  );
+
+  await db.query(
+    `INSERT INTO progress_snapshots (user_id, week, planned_hours, completed_hours, completion_rate)
+     VALUES ($1, $2, 6.0, 0, 0)`,
+    [userId, nextWeekStr],
   );
   console.log('6. Progress snapshots created');
 
@@ -672,8 +1132,8 @@ async function seed() {
      VALUES ($1, 'ai_suggest_accepted', $2, $3)`,
     [
       userId,
-      recSuggestLastId,
-      JSON.stringify({ type: 'suggest', summary: suggestLastOutput.summary }),
+      recWk2Id,
+      JSON.stringify({ type: 'suggest', summary: suggestWk2Output.summary }),
     ],
   );
 
@@ -682,18 +1142,18 @@ async function seed() {
      VALUES ($1, 'ai_suggest_accepted', $2, $3)`,
     [
       userId,
-      recSuggestThisId,
-      JSON.stringify({ type: 'suggest', summary: suggestThisOutput.summary }),
+      recWk1Id,
+      JSON.stringify({ type: 'suggest', summary: suggestWk1Output.summary }),
     ],
   );
 
   await db.query(
     `INSERT INTO audit_logs (user_id, action, recommendation_id, metadata)
-     VALUES ($1, 'ai_reschedule_accepted', $2, $3)`,
+     VALUES ($1, 'ai_suggest_accepted', $2, $3)`,
     [
       userId,
-      recRescheduleId,
-      JSON.stringify({ type: 'reschedule', summary: rescheduleOutput.summary }),
+      recWk0Id,
+      JSON.stringify({ type: 'suggest', summary: suggestWk0Output.summary }),
     ],
   );
   console.log('7. Audit logs created');
@@ -701,10 +1161,12 @@ async function seed() {
   console.log('\n✅ Seed complete!');
   console.log(`   User:  ${SEED_EMAIL} / ${SEED_PASSWORD}`);
   console.log(`   Admin: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
-  console.log(`   This week:     ${weekStr} (${weekStart} — ${weekEnd})`);
-  console.log(`   Last week:     ${lastWeekStr} (${lastMon} — ${lastSun})`);
-  console.log(`   Next week:     ${nextWeekStr} (${nextMon} — ${nextSun})`);
-  console.log('   Overdue tasks for reschedule: 4 (3 Goal 1, 1 Goal 2)');
+  console.log(`   Week -2:      ${last2WeekStr} (${last2Mon} — ${last2Sun})`);
+  console.log(`   Week -1:      ${lastWeekStr} (${lastMon} — ${lastSun})`);
+  console.log(`   Week 0:       ${weekStr} (${weekStart} — ${weekEnd})`);
+  console.log(`   Week +1:      ${nextWeekStr} (${nextMon} — ${nextSun})`);
+  console.log(`   Week +2:      ${next2WeekStr} (${next2Mon} — ${next2Sun})`);
+  console.log('   Overdue tasks: 4 (3 React, 1 Guitar)');
 
   await db.pool.end();
 }
