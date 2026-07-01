@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { api, streamSSE } from '../services/api';
+import { useState, useEffect } from 'react';
+import { api } from '../services/api';
 import {
   Sparkles,
   CheckCircle2,
@@ -45,9 +45,6 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
   const [acceptedTasks, setAcceptedTasks] = useState([]);
   const [recommendationId, setRecommendationId] = useState(null);
   const [acceptError, setAcceptError] = useState(null);
-  const [streamedTasks, setStreamedTasks] = useState({});
-  const [streamedSummary, setStreamedSummary] = useState(null);
-  const streamData = useRef({ tasks: {}, summary: null });
 
   async function fetchReschedule() {
     if (!tasks || tasks.length === 0) return;
@@ -57,37 +54,16 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
     setSuggestions(null);
     setTaskStates({});
     setAcceptedTasks([]);
-    setStreamedTasks({});
-    setStreamedSummary(null);
-    streamData.current = { tasks: {}, summary: null };
 
-    streamSSE('/ai/plan/reschedule/stream', { task_ids: tasks.map(t => t.id) }, {
-      onTask: ({ index, task }) => {
-        streamData.current.tasks[index] = task;
-        setStreamedTasks({ ...streamData.current.tasks });
-      },
-      onSummary: ({ summary }) => {
-        streamData.current.summary = summary;
-        setStreamedSummary(summary);
-      },
-      onDone: ({ recommendationId: recId, confidence }) => {
-        const sorted = Object.keys(streamData.current.tasks)
-          .sort((a, b) => Number(a) - Number(b))
-          .map((k) => streamData.current.tasks[k]);
-        setSuggestions({
-          id: recId,
-          tasks: sorted,
-          summary: streamData.current.summary || '',
-          confidence,
-        });
-        setRecommendationId(recId);
-        setLoading(false);
-      },
-      onError: (err) => {
-        setError(err.message || 'Gagal memuat saran reschedule');
-        setLoading(false);
-      },
-    });
+    try {
+      const res = await api.post('/ai/plan/reschedule', { task_ids: tasks.map(t => t.id) });
+      setSuggestions(res);
+      setRecommendationId(res.id);
+    } catch (err) {
+      setError(err.message || 'Gagal memuat saran reschedule');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleAccept(task, index) {
@@ -118,20 +94,6 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
   }
 
   /* ── Card renderers ── */
-
-  function renderSkeleton(i) {
-    return (
-      <div key={`skel-${i}`} className='bg-[#0f172a] border border-white/5 rounded-2xl p-5 space-y-3 animate-pulse'>
-        <div className='h-4 bg-white/5 rounded-full w-3/4' />
-        <div className='h-3 bg-white/5 rounded-full w-full' />
-        <div className='h-3 bg-white/5 rounded-full w-4/5' />
-        <div className='flex gap-2 mt-4'>
-          <div className='h-8 w-24 bg-white/5 rounded-xl' />
-          <div className='h-8 w-24 bg-white/5 rounded-xl' />
-        </div>
-      </div>
-    );
-  }
 
   function renderTaskCard(task, i) {
     const state = taskStates[i];
@@ -230,29 +192,7 @@ export default function AIReschedulePanel({ tasks, onRescheduled }) {
 
   /* ── Render: LOADING ── */
   if (loading) {
-    const streamedKeys = Object.keys(streamedTasks);
-    if (streamedKeys.length === 0) {
-      return <LoadingState variant='card' count={3} message='Memuat saran reschedule' />;
-    }
-
-    const maxIndex = Math.max(...streamedKeys.map(Number));
-    const cards = Array.from({ length: maxIndex + 1 }, (_, i) =>
-      streamedTasks[i] !== undefined ? renderTaskCard(streamedTasks[i], i) : renderSkeleton(i)
-    );
-
-    return (
-      <div className='space-y-4' aria-busy='true' role='region' aria-live='polite'>
-        {streamedSummary && (
-          <div className='bg-indigo-500/10 border border-indigo-500/20 rounded-2xl px-5 py-4 flex gap-3'>
-            <Sparkles className='text-indigo-400 flex-shrink-0 mt-0.5' size={16} />
-            <div className='flex-1'>
-              <p className='text-slate-300 text-sm leading-relaxed'>{streamedSummary}</p>
-            </div>
-          </div>
-        )}
-        {cards}
-      </div>
-    );
+    return <LoadingState variant='card' count={3} message='Memuat saran reschedule' />;
   }
 
   /* ── Render: ERROR ── */
