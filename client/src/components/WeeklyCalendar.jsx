@@ -181,7 +181,7 @@ export default function WeeklyCalendar({ onTaskClick, lastUpdate }) {
     <div className='flex flex-col gap-4'>
 
       {/* Navigation bar */}
-      <div className='flex items-center justify-between'>
+      <div className='flex items-center justify-between flex-wrap gap-y-2'>
         <div className='flex items-center gap-2'>
           <button
             onClick={() => shiftWeek(-1)}
@@ -219,9 +219,9 @@ export default function WeeklyCalendar({ onTaskClick, lastUpdate }) {
 
       {/* Loading / Error */}
       {loading && (
-        <div className='grid grid-cols-7 gap-2' aria-label='Memuat kalender' aria-live='polite' aria-busy='true'>
+        <div className='flex flex-col lg:flex-row gap-2' aria-label='Memuat kalender' aria-live='polite' aria-busy='true'>
           {DAYS.map(({ label }) => (
-            <div key={label} className='bg-white/5 rounded-2xl h-64 animate-pulse' />
+            <div key={label} className='bg-white/5 rounded-2xl h-48 lg:h-64 animate-pulse lg:flex-1' />
           ))}
         </div>
       )}
@@ -244,7 +244,7 @@ export default function WeeklyCalendar({ onTaskClick, lastUpdate }) {
       )}
 
       {!loading && !error && Object.keys(tasksByDay).length > 0 && (
-        <div className='grid grid-cols-7 gap-2 min-h-[480px]'>
+        <div className='flex flex-col lg:flex-row gap-2 lg:min-h-[500px]'>
           {DAYS.map(({ label }, dayIndex) => {
             const dateKey  = dateForIndex(weekStart, dayIndex);
             const dayTasks = tasksByDay[dateKey] || [];
@@ -258,7 +258,7 @@ export default function WeeklyCalendar({ onTaskClick, lastUpdate }) {
                 ref={el => { dayRefs.current[dayIndex] = el; }}
                 onFocus={() => setFocusedDayIndex(dayIndex)}
                 onKeyDown={e => handleDayKeyDown(e, dayIndex)}
-                className={`flex flex-col rounded-2xl border transition-all overflow-hidden outline-none
+                className={`flex flex-col lg:flex-1 rounded-2xl border transition-all overflow-hidden outline-none
                   ${isToday
                     ? 'border-indigo-500/40 bg-indigo-500/5 shadow-md shadow-indigo-500/10'
                     : isWeekend
@@ -289,18 +289,18 @@ export default function WeeklyCalendar({ onTaskClick, lastUpdate }) {
                       <div key={slot} className={`rounded-xl p-1.5 ${bg} border ${border}`}>
                         <div className={`flex items-center gap-1 mb-1 ${color}`}>
                           <Icon size={9} />
-                          <span className='text-[9px] font-semibold uppercase tracking-wide'>{slotLabel}</span>
+                          <span className='text-xs lg:text-[9px] font-semibold uppercase tracking-wide'>{slotLabel}</span>
                         </div>
                         <div className='space-y-1'>
                           {slotTasks.map(task => (
                             <button
                               key={task.id}
                               onClick={() => onTaskClick?.(task)}
-                              className={`w-full text-left rounded-lg border px-2 py-1.5 text-[10px] leading-tight transition-all ${STATUS_STYLE[task.status] ?? STATUS_STYLE.todo}`}
+                              className={`w-full rounded-lg border px-4 py-2 text-center sm:px-2 sm:py-1.5 sm:text-left text-sm lg:text-[10px] leading-tight transition-all ${STATUS_STYLE[task.status] ?? STATUS_STYLE.todo}`}
                             >
                               <p className='font-medium text-white line-clamp-2'>{task.title}</p>
                               <p className='text-slate-400 mt-0.5 flex items-center gap-1'>
-                                <Clock size={8} aria-hidden='true' />
+                                <Clock size={10} aria-hidden='true' />
                                 {task.duration_estimate}m
                               </p>
                             </button>

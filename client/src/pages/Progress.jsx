@@ -119,6 +119,7 @@ export default function Progress() {
 
   return (
     <div className='min-h-screen bg-[#020617] text-white p-6'>
+      <div className='max-w-6xl mx-auto'>
 
       {/* Header */}
       <div className='mb-8'>
@@ -307,6 +308,7 @@ export default function Progress() {
         )}
       </div>
     </>)}
+      </div>
     </div>
   );
 }
