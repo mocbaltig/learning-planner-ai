@@ -88,6 +88,7 @@ export default function Goals() {
 
   return (
     <div className='min-h-screen bg-[#020617] text-white p-6'>
+      <div className='max-w-2xl mx-auto'>
       {/* Header */}
       <div className='mb-8'>
         <h1 className='text-3xl font-bold'>Goals Belajar</h1>
@@ -246,7 +247,7 @@ export default function Goals() {
           <p className='text-gray-400'>Mulailah membuat target belajar pertama Anda.</p>
         </div>
       ) : !loading && !loadError && (
-        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+        <div className='flex flex-col gap-6'>
           {goals.map(g => (
             <div
               key={g.id}
@@ -282,6 +283,7 @@ export default function Goals() {
         onConfirm={handleDeleteConfirmed}
         onCancel={() => setConfirmDelete(null)}
       />
+      </div>
     </div>
   );
 }

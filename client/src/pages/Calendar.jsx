@@ -164,7 +164,8 @@ export default function Calendar() {
   }
 
   return (
-    <div className='min-h-screen bg-[#020617] text-white p-6'>
+    <div className='min-h-screen bg-[#020617] text-white p-4 sm:p-6'>
+      <div className='max-w-6xl mx-auto'>
       {/* Page header */}
       <div className='mb-6'>
         <h1 className='text-2xl font-bold'>Kalender Mingguan</h1>
@@ -174,7 +175,7 @@ export default function Calendar() {
       </div>
 
       {/* Legend */}
-      <div className='flex items-center gap-4 mb-5 text-xs text-slate-400'>
+      <div className='flex items-center gap-4 mb-5 text-xs text-slate-400 flex-wrap'>
         <span className='flex items-center gap-1.5'>
           <span className='w-2.5 h-2.5 rounded-sm border border-white/10 bg-white/5' /> Belum
         </span>
@@ -197,6 +198,7 @@ export default function Calendar() {
           setSelectedTask(task);
         }}
       />
+      </div>
 
       {/* Task detail drawer */}
       {selectedTask && (

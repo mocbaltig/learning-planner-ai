@@ -189,7 +189,7 @@ export default function MainLayout() {
           <Link to='/profile' className='flex items-center gap-3 hover:opacity-80 transition-opacity'>
             <div className='text-right hidden sm:block'>
               <p className='text-sm font-medium text-white'>{displayName}</p>
-              <p className='text-xs text-slate-400'>Peserta Bootcamp</p>
+              <p className='text-xs text-slate-400'>{isAdmin ? 'Administrator' : 'Pembelajar'}</p>
             </div>
             <div className='w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white'>
               {initial}
